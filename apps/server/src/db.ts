@@ -14,6 +14,7 @@ import {
   type Category,
   type FeedEventType,
   type MerchantSummary,
+  type TopupStatus,
 } from '@tamsi/shared'
 import type { AgentCard, AgentMerchant, TapStore } from '@tamsi/agent'
 
@@ -174,6 +175,43 @@ export interface StoredNoirEvent {
   txHash: string
 }
 
+export interface TopupRecord {
+  id: string
+  deviceHash: string
+  paymentIntentId: string
+  amount: bigint
+  requestedBy: 'ofw' | 'agent'
+  status: TopupStatus
+  checkoutUrl: string | null
+  fundTxHash: string | null
+}
+
+interface TopupRow {
+  id: string
+  device_hash: string
+  payment_intent_id: string
+  amount: string
+  requested_by: 'ofw' | 'agent'
+  status: TopupStatus
+  checkout_url: string | null
+  fund_tx_hash: string | null
+}
+
+function parseTopup(row: unknown): TopupRecord | null {
+  if (!row) return null
+  const topup = row as TopupRow
+  return {
+    id: topup.id,
+    deviceHash: topup.device_hash,
+    paymentIntentId: topup.payment_intent_id,
+    amount: BigInt(topup.amount),
+    requestedBy: topup.requested_by,
+    status: topup.status,
+    checkoutUrl: topup.checkout_url,
+    fundTxHash: topup.fund_tx_hash,
+  }
+}
+
 function parseNoirEvents(rows: unknown): StoredNoirEvent[] {
   return (rows as { payload: string }[]).map((row) => JSON.parse(row.payload) as StoredNoirEvent)
 }
@@ -202,6 +240,16 @@ export function createStore(db: DatabaseSync) {
   const noirEventsForTx = db.prepare(`SELECT payload FROM noir_events WHERE json_extract(payload, '$.txHash') = ?`)
   const merchantByAddress = db.prepare('SELECT id, name, category, stellar_address FROM merchants WHERE stellar_address = ?')
   const tapReason = db.prepare('SELECT reason_text FROM taps WHERE tx_hash = ?')
+  const topupInsert = db.prepare(
+    `INSERT INTO topups (id, device_hash, payment_intent_id, amount, requested_by, status, checkout_url)
+     VALUES (?, ?, ?, ?, ?, 'created', ?)`,
+  )
+  const topupById = db.prepare('SELECT * FROM topups WHERE id = ?')
+  const topupByIntent = db.prepare('SELECT * FROM topups WHERE payment_intent_id = ?')
+  const topupPaid = db.prepare(`UPDATE topups SET status = 'paid' WHERE id = ? AND status = 'created'`)
+  const topupFunded = db.prepare(`UPDATE topups SET status = 'funded', fund_tx_hash = ? WHERE id = ?`)
+  const topupFailed = db.prepare(`UPDATE topups SET status = 'fund_failed' WHERE id = ?`)
+  const deliveryInsert = db.prepare('INSERT OR IGNORE INTO velo_deliveries (delivery_id) VALUES (?)')
 
   const store = {
     getCard(deviceHash: string): AgentCard | null {
@@ -281,6 +329,30 @@ export function createStore(db: DatabaseSync) {
     },
     noirEventsByTx(txHash: string): StoredNoirEvent[] {
       return parseNoirEvents(noirEventsForTx.all(txHash))
+    },
+    createTopup(topup: Pick<TopupRecord, 'id' | 'deviceHash' | 'amount' | 'requestedBy' | 'paymentIntentId' | 'checkoutUrl'>): TopupRecord {
+      topupInsert.run(topup.id, topup.deviceHash, topup.paymentIntentId, topup.amount.toString(), topup.requestedBy, topup.checkoutUrl)
+      return parseTopup(topupById.get(topup.id))!
+    },
+    getTopup(id: string): TopupRecord | null {
+      return parseTopup(topupById.get(id))
+    },
+    getTopupByIntent(paymentIntentId: string): TopupRecord | null {
+      return parseTopup(topupByIntent.get(paymentIntentId))
+    },
+    // False when it already left `created`: that is what makes funding happen once.
+    markTopupPaid(id: string): boolean {
+      return topupPaid.run(id).changes === 1
+    },
+    markTopupFunded(id: string, txHash: string): void {
+      topupFunded.run(txHash, id)
+    },
+    markTopupFailed(id: string): void {
+      topupFailed.run(id)
+    },
+    // False when this delivery id was already seen.
+    recordVeloDelivery(deliveryId: string): boolean {
+      return deliveryInsert.run(deliveryId).changes === 1
     },
     listMerchants(): MerchantSummary[] {
       return db.prepare('SELECT id, name, category FROM merchants ORDER BY rowid').all() as unknown as MerchantSummary[]

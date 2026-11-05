@@ -1,10 +1,12 @@
 // One Railway service: this process serves the API and the built web app.
+import { Velo } from '@carts1024/velo-sdk'
 import { NoirAgentClient } from '@noirx402/agent-sdk'
-import { createNoirChain, createTamsi, deviceHashFromUid } from '@tamsi/agent'
+import { XLM_ASSET, createNoirChain, createTamsi, deviceHashFromUid } from '@tamsi/agent'
 import { createApp, type Services } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createStore, openDb, seedDemo } from './db.ts'
 import { createFeed } from './feed.ts'
+import { createTopups } from './topups.ts'
 
 async function buildServices(): Promise<Services> {
   const config = loadConfig()
@@ -27,7 +29,25 @@ async function buildServices(): Promise<Services> {
   const store = createStore(db)
   const chain = createNoirChain(noir, config.agent)
   const feed = createFeed({ noir, store, phpPerXlm: config.phpPerXlm })
-  return { config, noir, store, tamsi: createTamsi({ store, chain }), feed }
+  const topups = config.velo
+    ? createTopups({
+        velo: new Velo({ apiKey: config.velo.apiKey, environment: 'testnet' }),
+        webhookSecret: config.velo.webhookSecret,
+        publicUrl: config.velo.publicUrl,
+        store,
+        fund: async (cardHash, amount) => {
+          const { hash } = await noir.execute(config.treasury, {
+            kind: 'fundEscrow',
+            deviceHash: cardHash,
+            token: XLM_ASSET,
+            amount,
+          })
+          return hash
+        },
+      })
+    : null
+  if (!topups) console.log('Velo keys not set: padala top-ups are off.')
+  return { config, noir, store, tamsi: createTamsi({ store, chain }), feed, topups }
 }
 
 let services: Services | null = null

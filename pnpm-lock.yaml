@@ -39,6 +39,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@carts1024/velo-sdk':
+        specifier: 0.1.0-alpha.4
+        version: 0.1.0-alpha.4
       '@noirx402/agent-sdk':
         specifier: ^0.3.0
         version: 0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)

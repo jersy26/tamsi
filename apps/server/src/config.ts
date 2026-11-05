@@ -12,6 +12,8 @@ export interface Config {
   sqlitePath: string
   // Stroops of pesos per XLM; null hides the peso figure.
   phpPerXlm: bigint | null
+  // Null until the Velo project exists; everything else still runs without it.
+  velo: { apiKey: string; webhookSecret: string; publicUrl: string } | null
 }
 
 // A dashboard paste can keep the quotes .env needs around JSON, so they're allowed here.
@@ -36,5 +38,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     demoCardUid: env.DEMO_CARD_UID!,
     sqlitePath: env.SQLITE_PATH || 'tamsi.db',
     phpPerXlm: env.DEMO_PHP_PER_XLM ? toStroops(env.DEMO_PHP_PER_XLM) : null,
+    velo:
+      env.VELO_API_KEY && env.VELO_WEBHOOK_SECRET && env.PUBLIC_URL
+        ? {
+            apiKey: env.VELO_API_KEY,
+            webhookSecret: env.VELO_WEBHOOK_SECRET,
+            publicUrl: env.PUBLIC_URL.replace(/\/$/, ''),
+          }
+        : null,
   }
 }

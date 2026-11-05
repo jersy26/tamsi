@@ -1,7 +1,7 @@
 // The OFW's view: is my family okay, how much is left, did anything odd happen. Three
 // numbers, then the receipts. New receipts arrive over SSE; every number comes from the server.
-import { useEffect, useRef, useState } from 'react'
-import type { CardDetail, CardSummary, FeedEventType, FeedItem, Money } from '@tamsi/shared'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import type { CardDetail, CardSummary, FeedEventType, FeedItem, Money, TopupDetail } from '@tamsi/shared'
 import { getJson } from './api.ts'
 
 const RECEIPT_ICONS: Record<FeedEventType, { icon: string; className: string }> = {
@@ -33,6 +33,57 @@ function NumberTile(props: { label: string; money: Money | null; note?: string; 
         {note && <span className="number-note">{note}</span>}
       </dd>
     </div>
+  )
+}
+
+const AMOUNT_PATTERN = /^\d+(\.\d{1,7})?$/
+// A plain zero in any form: "0", "00", "0.00".
+const ZERO_PATTERN = /^0+(\.0*)?$/
+
+function SendPadala({ deviceHash }: { deviceHash: string }) {
+  const [amount, setAmount] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const valid = AMOUNT_PATTERN.test(amount) && !ZERO_PATTERN.test(amount)
+
+  async function send(event: FormEvent) {
+    event.preventDefault()
+    if (!valid || sending) return
+    setSending(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/topups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceHash, amount }),
+      })
+      if (!res.ok) throw new Error(`Top-up answered ${res.status}`)
+      const { checkoutUrl } = (await res.json()) as TopupDetail
+      if (!checkoutUrl) throw new Error('No checkout link')
+      window.location.assign(checkoutUrl)
+    } catch {
+      setError("We couldn't open the checkout. Try again in a moment.")
+      setSending(false)
+    }
+  }
+
+  return (
+    <form className="padala" onSubmit={send}>
+      <label className="padala-field">
+        <span>Send padala (XLM)</span>
+        <input
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value.trim())}
+        />
+      </label>
+      <button className="button primary" type="submit" disabled={!valid || sending}>
+        {sending ? 'Opening…' : 'Send padala'}
+      </button>
+      {error && <p className="padala-error">{error}</p>}
+    </form>
   )
 }
 
@@ -139,6 +190,7 @@ export function Ofw() {
             <NumberTile label="Ipon kept" money={card.iponKept} />
           </dl>
           {hasPesos && <p className="rate-note">Demo rate — Testnet XLM, no real money.</p>}
+          {card.padalaEnabled && <SendPadala deviceHash={card.deviceHash} />}
 
           <h2 className="feed-title">Receipts</h2>
           {card.feed.length === 0 ? (

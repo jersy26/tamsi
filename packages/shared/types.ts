@@ -71,4 +71,17 @@ export interface CardDetail extends CardSummary {
   leftToday: Money
   leftLimitedByIpon: boolean
   feed: FeedItem[]
+  // False until the Velo keys are set, so the screen doesn't offer a checkout that can't open.
+  padalaEnabled: boolean
+}
+
+export type TopupStatus = 'created' | 'paid' | 'funded' | 'fund_failed'
+
+// What /api/topups returns. A browser only ever reads the status.
+export interface TopupDetail {
+  id: string
+  status: TopupStatus
+  amount: Money
+  checkoutUrl: string | null
+  explorerUrl: string | null
 }

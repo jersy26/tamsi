@@ -3,11 +3,12 @@ import { resolve } from 'node:path'
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { fromStroops, normalizeDeviceHash, toStroops, type NoirAgentClient } from '@noirx402/agent-sdk'
 import { deviceHashFromUid, explorerTxUrl, phDayStart, type createTamsi } from '@tamsi/agent'
-import type { CardDetail, TapResponse } from '@tamsi/shared'
+import type { CardDetail, TapResponse, TopupDetail } from '@tamsi/shared'
 import type { Config } from './config.ts'
-import type { Store } from './db.ts'
+import type { Store, TopupRecord } from './db.ts'
 import type { Feed } from './feed.ts'
 import { toMoney } from './money.ts'
+import type { Topups } from './topups.ts'
 
 export interface Services {
   config: Config
@@ -15,6 +16,8 @@ export interface Services {
   store: Store
   tamsi: ReturnType<typeof createTamsi>
   feed: Feed
+  // Null until the Velo keys are set.
+  topups: Topups | null
 }
 
 const WEB_DIST = resolve(import.meta.dirname, '../../web/dist')
@@ -31,12 +34,13 @@ function settledValue<T>(result: PromiseSettledResult<T>): T | null {
   return result.status === 'fulfilled' ? result.value : null
 }
 
+const AMOUNT_PATTERN = /^\d+(\.\d{1,7})?$/
+const AMOUNT_ERROR = 'amount must be a decimal string with at most 7 decimals'
+
 function parseTapBody(body: unknown): { deviceHash: string; merchantId: string; amount: bigint } | { error: string } {
   const { uid, deviceHash, merchantId, amount } = (body ?? {}) as Record<string, unknown>
   if (typeof merchantId !== 'string' || !merchantId) return { error: 'merchantId is required' }
-  if (typeof amount !== 'string' || !/^\d+(\.\d{1,7})?$/.test(amount)) {
-    return { error: 'amount must be a decimal string with at most 7 decimals' }
-  }
+  if (typeof amount !== 'string' || !AMOUNT_PATTERN.test(amount)) return { error: AMOUNT_ERROR }
   if (typeof uid === 'string' && uid) {
     return { deviceHash: deviceHashFromUid(uid), merchantId, amount: toStroops(amount) }
   }
@@ -60,6 +64,21 @@ function parseDeviceHash(raw: string): string | null {
 export function createApp(services: Services | null) {
   const app = express()
   app.use('/api', express.json())
+
+  // Raw body: the signature covers the exact bytes Velo sent (agents.md rule 6).
+  app.post('/webhooks/velo', express.raw({ type: '*/*' }), async (req, res) => {
+    if (!services?.topups) {
+      res.sendStatus(503)
+      return
+    }
+    const { status, settled } = await services.topups.receiveWebhook({
+      payload: Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '',
+      signature: req.get('x-velo-signature') ?? null,
+      deliveryId: req.get('x-velo-delivery') ?? null,
+    })
+    res.sendStatus(status)
+    await settled
+  })
 
   app.get('/api/health', async (_req, res) => {
     if (!services) {
@@ -87,12 +106,20 @@ export function createApp(services: Services | null) {
         policyRegistered: settledValue(policy) !== null,
       },
       watcher: feed.status(),
+      veloConfigured: services.topups !== null,
     })
   })
 
   if (services) {
-    const { config, noir, store, tamsi, feed } = services
+    const { config, noir, store, tamsi, feed, topups } = services
     const money = (stroops: bigint) => toMoney(stroops, config.phpPerXlm)
+    const topupBody = (topup: TopupRecord): TopupDetail => ({
+      id: topup.id,
+      status: topup.status,
+      amount: money(topup.amount),
+      checkoutUrl: topup.checkoutUrl,
+      explorerUrl: topup.fundTxHash ? explorerTxUrl(topup.fundTxHash) : null,
+    })
 
     app.get('/api/merchants', (_req, res) => {
       res.json(store.listMerchants())
@@ -137,6 +164,7 @@ export function createApp(services: Services | null) {
         leftToday: money(leftLimitedByIpon ? aboveIpon : capLeft),
         leftLimitedByIpon,
         feed: feed.list(card.deviceHash),
+        padalaEnabled: topups !== null,
       }
       res.json(body)
     })
@@ -164,6 +192,43 @@ export function createApp(services: Services | null) {
         clearInterval(heartbeat)
         unsubscribe()
       })
+    })
+
+    app.post('/api/topups', async (req, res) => {
+      if (!topups) {
+        res.status(503).json({ error: 'Padala is not set up yet' })
+        return
+      }
+      const { deviceHash: rawHash, amount } = (req.body ?? {}) as Record<string, unknown>
+      const deviceHash = typeof rawHash === 'string' ? parseDeviceHash(rawHash) : null
+      if (!deviceHash || !store.getCard(deviceHash)) {
+        res.status(404).json({ error: 'Card not found' })
+        return
+      }
+      if (typeof amount !== 'string' || !AMOUNT_PATTERN.test(amount)) {
+        res.status(400).json({ error: AMOUNT_ERROR })
+        return
+      }
+      const stroops = toStroops(amount)
+      if (stroops <= 0n) {
+        res.status(400).json({ error: 'amount must be above zero' })
+        return
+      }
+      try {
+        res.json(topupBody(await topups.create(deviceHash, stroops, 'ofw')))
+      } catch (err) {
+        console.error('Could not open a Velo checkout:', err)
+        res.status(502).json({ error: "We couldn't open the checkout. Try again in a moment." })
+      }
+    })
+
+    app.get('/api/topups/:id', (req, res) => {
+      const topup = store.getTopup(req.params.id)
+      if (!topup) {
+        res.status(404).json({ error: 'Top-up not found' })
+        return
+      }
+      res.json(topupBody(topup))
     })
 
     app.post('/api/taps', async (req, res) => {
