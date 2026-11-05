@@ -64,7 +64,7 @@ Who pays the Velo checkout in the demo: any browser wallet (the Noir extension w
 | 3 | `spentToday + amount <= dailyCap` (PH day, UTC+8) | `daily_cap` |
 | 4 | `getEscrowBalance - amount >= iponFloor` | `ipon_floor` + top-up request |
 | 5 | `noir.checkPayment({ deviceHash, agent, asset, amount })` | Noir's reason: `no_agent`, `wrong_agent`, `wrong_asset`, `invalid_amount`, `over_limit`, `expired`, `insufficient_escrow` |
-| 6 | `noir.authorizePayment({ agent, deviceHash, merchant, asset, amount })` | `NoirContractError.name` |
+| 6 | `noir.authorizePayment({ agent, deviceHash, merchant, asset, amount })` | `NoirContractError.errorName` |
 | 7 | After paying: usable balance < 2 days of average spend → top-up request | — |
 
 Deterministic code only. Each result has `reasonCode` + a template sentence.
@@ -100,6 +100,7 @@ Categories: `grocery`, `sari_sari`, `pharmacy`, `school`, `utilities`, `other`. 
 
 | Method | Path | Notes |
 | :-- | :-- | :-- |
+| GET | `/api/merchants`, `/api/cards` | Lists for the `/pos` pickers |
 | GET | `/api/cards/:hash` | Card, rules, balance, spent today |
 | PATCH | `/api/cards/:hash/rules` | Edit off-chain rules (Tier 3 UI) |
 | POST | `/api/cards/:hash/kill` | Kill switch |

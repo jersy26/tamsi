@@ -17,6 +17,12 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^16.4.1
         version: 16.4.1
+      '@tamsi/agent':
+        specifier: workspace:*
+        version: link:packages/agent
+      '@tamsi/shared':
+        specifier: workspace:*
+        version: link:packages/shared
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -30,6 +36,18 @@ importers:
 
   apps/server:
     dependencies:
+      '@noirx402/agent-sdk':
+        specifier: ^0.3.0
+        version: 0.3.0(@stellar/stellar-sdk@16.4.1)
+      '@stellar/stellar-sdk':
+        specifier: ^16.4.1
+        version: 16.4.1
+      '@tamsi/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      '@tamsi/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       express:
         specifier: ^5.3.0
         version: 5.3.0
@@ -37,6 +55,20 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
+
+  packages/agent:
+    dependencies:
+      '@noirx402/agent-sdk':
+        specifier: ^0.3.0
+        version: 0.3.0(@stellar/stellar-sdk@16.4.1)
+      '@stellar/stellar-sdk':
+        specifier: ^16.4.1
+        version: 16.4.1
+      '@tamsi/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/shared: {}
 
 packages:
 

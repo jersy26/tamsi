@@ -1,0 +1,6 @@
+{
+  "name": "@tamsi/shared",
+  "private": true,
+  "type": "module",
+  "exports": "./index.ts"
+}

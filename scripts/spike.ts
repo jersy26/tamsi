@@ -74,7 +74,7 @@ try {
 } catch (err) {
   if (!(err instanceof NoirContractError)) throw err
   saveProof(`No. The contract refused with \`${err.name}\`; use the BUILD-PLAN §4 fallback.`)
-  console.error(`Treasury could not fund: ${err.name}`)
+  console.error(`Treasury could not fund: ${err.errorName}`)
   process.exit(1)
 }
 

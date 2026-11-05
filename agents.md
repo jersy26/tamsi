@@ -21,7 +21,7 @@ Every tool reads this file. `CLAUDE.md` only points here.
 ## Conventions
 - pnpm workspaces only. Node `>=24.22.1` (pin in `.nvmrc` and `engines`). TypeScript strict.
 - Reason codes live in `packages/shared/reasons.ts`; UI text maps from codes, never ad-hoc strings.
-- Catch `NoirContractError` and surface `err.name`.
+- Catch `NoirContractError` and surface `err.errorName` (the contract's own error; `err.name` is always the class name).
 - Every chain write logs its tx hash and links to `https://stellar.expert/explorer/testnet/tx/<hash>`.
 - Solo build: one feature at a time, small commits straight to `main`, and `main` must always deploy. One Railway service: Express serves `apps/web/dist`.
 - Work from one SDD section per session. Don't start a Tier 2 item until every Tier 1 box in `docs/PRD.md` is checked.
