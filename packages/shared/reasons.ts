@@ -25,13 +25,13 @@ export type ReasonCode = (typeof REASON_CODES)[number]
 export interface ReasonContext {
   amountXlm: string
   merchantName: string
-  categoryLabel: string
+  categoryAllowed: string
   leftTodayXlm: string
   contractError: string
 }
 
 const TEMPLATES: Record<ReasonCode, (c: ReasonContext) => string> = {
-  paid: (c) => `Paid ${c.amountXlm} XLM at ${c.merchantName} — ${c.categoryLabel} are allowed and you're under today's limit.`,
+  paid: (c) => `Paid ${c.amountXlm} XLM at ${c.merchantName} — ${c.categoryAllowed} and you're under today's limit.`,
   card_inactive: () => "This card isn't active right now. The OFW can turn it back on.",
   merchant_not_allowed: (c) => `${c.merchantName} isn't on this card's allowed list. The OFW can add this kind of shop.`,
   daily_cap: (c) => `This goes over today's limit — ${c.leftTodayXlm} XLM left today. Try a smaller amount, or tap again tomorrow.`,
@@ -51,7 +51,7 @@ export function reasonText(code: ReasonCode, context: Partial<ReasonContext> = {
   return TEMPLATES[code]({
     amountXlm: '',
     merchantName: 'This shop',
-    categoryLabel: 'purchases',
+    categoryAllowed: 'this shop is allowed',
     leftTodayXlm: '0',
     contractError: 'unknown',
     ...context,

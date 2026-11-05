@@ -3,7 +3,7 @@
 // chain call, so a tap the rules refuse costs nothing.
 import { NoirContractError, fromStroops, type PaymentCheck } from '@noirx402/agent-sdk'
 import {
-  CATEGORY_LABELS,
+  CATEGORY_ALLOWED,
   reasonText,
   type CardStatus,
   type Category,
@@ -75,7 +75,7 @@ export async function decide(
   const merchant = store.getMerchant(tap.merchantId)
   const context: Partial<ReasonContext> = {
     amountXlm: fromStroops(tap.amount),
-    ...(merchant && { merchantName: merchant.name, categoryLabel: CATEGORY_LABELS[merchant.category] }),
+    ...(merchant && { merchantName: merchant.name, categoryAllowed: CATEGORY_ALLOWED[merchant.category] }),
   }
 
   const decline = (id: CheckId, reasonCode: ReasonCode): Decision => {

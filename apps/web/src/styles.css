@@ -1,0 +1,241 @@
+:root {
+  --navy: #0d2137;
+  --navy-raised: #16324f;
+  --navy-line: #2a4a6b;
+  --text: #f4f7fa;
+  --text-muted: #b4c4d4;
+  --mango: #f6a723;
+  --mango-ink: #2b1c00;
+  --approved: #1c7c4d;
+  --declined: #a5413f;
+  --waiting: #a86a00;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--navy);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--mango);
+  outline-offset: 2px;
+}
+
+.testnet-banner {
+  padding: 6px 16px;
+  background: var(--navy-raised);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.button {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button.primary {
+  background: var(--mango);
+  color: var(--mango-ink);
+}
+
+.button:disabled {
+  background: var(--navy-raised);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Home */
+.lede {
+  margin: 0 0 24px;
+  font-size: 1.125rem;
+  color: var(--text-muted);
+}
+
+.steps {
+  margin: 0 0 28px;
+  padding-left: 22px;
+}
+
+.steps li {
+  margin-bottom: 10px;
+}
+
+/* Counter */
+.merchants {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.merchants legend,
+.amount-field span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.merchant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 2px solid var(--navy-line);
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.merchant.selected {
+  border-color: var(--mango);
+  background: var(--navy-raised);
+}
+
+.merchant input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--mango);
+}
+
+.amount-field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.amount-field input {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 2px solid var(--navy-line);
+  border-radius: var(--radius);
+  background: var(--navy-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tap-button {
+  min-height: 64px;
+  font-size: 1.25rem;
+}
+
+.card-line {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.load-error {
+  margin: 0 0 16px;
+  color: var(--text);
+}
+
+/* The decision fills the width and reads at arm's length. */
+.decision {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: var(--radius);
+  color: #fff;
+}
+
+.decision.approved {
+  background: var(--approved);
+}
+
+.decision.declined {
+  background: var(--declined);
+}
+
+.decision.waiting {
+  background: var(--waiting);
+}
+
+.decision-word {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.decision-amount {
+  margin: 6px 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.decision-php {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.decision-reason {
+  margin: 10px 0 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.checks {
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid rgb(255 255 255 / 0.35);
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.check-failed {
+  font-weight: 700;
+}
+
+.explorer-link {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}

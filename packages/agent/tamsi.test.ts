@@ -74,7 +74,7 @@ test('allowed tap within limits pays through the chain', async () => {
   assert.equal(out.decision, 'approved')
   assert.equal(out.reasonCode, 'paid')
   assert.equal(out.txHash, 'hash-1')
-  assert.match(out.reasonText, /Paid 5 XLM at Aling Nena's Store/)
+  assert.equal(out.reasonText, "Paid 5 XLM at Aling Nena's Store — groceries are allowed and you're under today's limit.")
   assert.deepEqual(
     out.checks.map((c) => [c.id, c.ok]),
     [
