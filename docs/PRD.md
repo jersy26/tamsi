@@ -25,12 +25,12 @@ Build Tier 1 completely before touching Tier 2. Tier 3 only if every Tier 2 box 
 ### Tier 1 — must ship (Phases 1–2)
 
 **Guarded tap.** A tap on `/pos` goes to the Tamsi agent, which runs the checks in SDD §3 and pays through Noir or declines with a reason.
-- [ ] Allowed merchant within limits → paid through Noir; tx hash with Stellar Expert link
-- [ ] Non-allowed merchant → `merchant_not_allowed`, no chain call
-- [ ] Over daily cap → `daily_cap`
-- [ ] Below savings floor → `ipon_floor`
-- [ ] Over on-chain per-tap max → Noir's `over_limit`
-- [ ] Two taps within 1 s can't both pass the daily cap
+- [x] Allowed merchant within limits → paid through Noir; tx hash with Stellar Expert link
+- [x] Non-allowed merchant → `merchant_not_allowed`, no chain call
+- [x] Over daily cap → `daily_cap`
+- [x] Below savings floor → `ipon_floor`
+- [x] Over on-chain per-tap max → Noir's `over_limit`
+- [x] Two taps within 1 s can't both pass the daily cap
 
 **Padala top-up (Velo).** "Send padala" on `/ofw` opens a Velo checkout; the card is funded through Noir only after the verified `payment.succeeded` webhook and a retrieved intent showing paid.
 - [ ] Status goes created → paid → funded; balance rises

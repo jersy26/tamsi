@@ -1,7 +1,8 @@
 # Tamsi — Session Handoff
 
-**Date:** 2026-11-06 (second session: Phase 1 code)
-**Branch:** `main`, local only. No GitHub remote exists yet, so nothing is pushed.
+**Date:** 2026-11-06 (second session: Phase 1, deployed)
+**Branch:** `main`, pushed to https://github.com/jersy26/tamsi (public).
+**Live:** https://tamsi-production.up.railway.app (Railway, Trial plan, project `stunning-amazement`).
 **Deadline:** submissions close **Sat Nov 7, 12:00 PM**. Aim to submit by 11:00 AM.
 **Tests:** `pnpm test` (14 pass), `pnpm typecheck` passes, real taps passed on Testnet.
 
@@ -11,22 +12,21 @@
 
 ## 0. To do
 
-### Finish Phase 1: deploy (needs the user)
-Phase 1 is done when a tap on the live URL pays through Noir or declines with a reason. All the code for this is committed; only the deploy is left.
+### Phase 1: done
+The Phase 1 gate passed on the live URL: taps pay through Noir or decline with a reason. All six Guarded tap boxes in the PRD are ticked from live taps.
 
-1. Publish the repo to public GitHub (GitHub Desktop is installed). The history has no secrets; `.env` and `tamsi.db` are gitignored.
-2. In Railway, create a project from that repo. It finds the `Dockerfile`, which pins Node 24.22.1.
-3. Add a volume mounted at `/data`.
-4. Set these variables, copying values from `.env`: `AGENT_SECRET`, `OFW_SECRET`, `TREASURY_SECRET`, `MERCHANT_SECRETS`, `DEMO_CARD_UID`, `DEMO_PHP_PER_XLM`. Set `SQLITE_PATH=/data/tamsi.db`.
-5. Generate a domain, then check `/api/health` shows `configured: true`, and tap on `/pos`.
-6. Put the domain in `PUBLIC_URL` and in the README. Tick the Guarded tap boxes in the PRD once they pass on the live URL.
+**Railway setup:** Dockerfile build, volume at `/data`, target port 8080, and 8 variables. Railway was linked by pasting the public repo URL, so the Railway GitHub App isn't installed. Check whether a push redeploys; if it doesn't, redeploy from the dashboard or install the app.
+
+### Watch these
+- **Paid taps take about 22-25 s on the live URL.** Declines take 0.6-8 s. The counter says "Checking" the whole time, which is long for the demo video. Not investigated yet.
+- **Railway partial outage:** some networks block Railway IPs (https://status.railway.com/incident/QBCLHG1V). Test the URL on Wi-Fi and phone data before submitting. The Docker image can move to another host without code changes.
+- **Live spend today is 16 of the 25 XLM cap**, and the card has 23.5 XLM, only 3.5 above the floor. The cap resets at Philippine midnight. Velo padala or `pnpm fund:demo` refills the card before recording.
 
 ### Next (code work): Phase 2
 `/api/topups`, `/webhooks/velo` → `fundEscrow`, then `/ofw` with the `noir.watch` feed over SSE, and `GET /api/cards/:hash`. `/ofw` can be built before Velo is ready.
 
 ### Needs the user (cannot be done from here)
 - **Velo project:** create a Testnet project at velo-build.dev using the treasury wallet, `GBRFIH6D4FOG333NO43DRQ74AZLEQQCEI4KJ4H7EAKQ3ACRCUITNCU45`. Import `TREASURY_SECRET` from `.env` into a browser wallet to do it. Put `VELO_API_KEY` and `VELO_WEBHOOK_SECRET` in `.env`, never in chat. Blocks the top-up half of Phase 2.
-- **Railway and GitHub:** the deploy steps above.
 - **Discord handle:** still a TODO in `README.md`.
 
 ### Check before relying on it
@@ -50,13 +50,13 @@ Phase 1 is done when a tap on the live URL pays through Noir or declines with a 
 | `scripts/fund-demo.ts` | `pnpm fund:demo 60`: treasury funds the card by hand. A developer tool, not reachable from the server. |
 | `scripts/spike.ts`, `docs/testnet-proof.md` | Phase 0 proof. Each spike run overwrites the proof file. |
 
-**Demo card now:** 39.5 XLM on the card; per-tap max 10, daily cap 25, ipon floor 20, all in XLM (`packages/shared/demo.ts`). Demo rate ₱50 per XLM.
+**Demo card now:** 23.5 XLM on the card; per-tap max 10, daily cap 25, ipon floor 20, all in XLM (`packages/shared/demo.ts`). Demo rate ₱50 per XLM.
 
 **Proved on Testnet (this session):** the local server gave `paid`, `merchant_not_allowed`, `over_limit`, `daily_cap` and `invalid_amount`; two taps sent at once gave one `paid` and one `daily_cap`; `ipon_floor` fired with the floor raised in the local DB only. The Docker image on Node 24.22.1 paid a tap, and its spend survived a restart on a volume.
 
-**Agent pays:** https://stellar.expert/explorer/testnet/tx/681c1a218357afb18bf31b4ab9304fbb8503a63ace3a69e8ddb2a5ff1fce3649 and, on Node 24.22.1, https://stellar.expert/explorer/testnet/tx/d1f482476d8fb46c3343da10cc52e5651571fac3a579d1ac005c3c4d8f64abbd
+**Agent pays, on the live URL:** https://stellar.expert/explorer/testnet/tx/c16968ef017896a0d1a94ee6e94da7f5afed13c1a26f24a77fa5de45609a1929
 
-**Not done:** the live deploy and Phases 2–5. No PRD box is ticked yet. A top-up request on `ipon_floor` and low balance is Phase 3.
+**Not done:** Phases 2–5. Only the Guarded tap boxes are ticked. A top-up request on `ipon_floor` and low balance is Phase 3.
 
 ---
 
