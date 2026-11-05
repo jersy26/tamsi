@@ -72,7 +72,9 @@ Deterministic code only. Each result has `reasonCode` + a template sentence.
 **Top-up request amount** = `avgDailySpend(last 7 days, default dailyCap/2) × daysUntilNextPayday + iponFloor − escrowBalance`, rounded up to 1 XLM, minimum 5 XLM. The agent creates the Velo session itself (`requested_by = 'agent'`) and the feed shows the formula filled in.
 
 ### Events → feed
-On boot: `noir.watch({ types: ['payment.authorized', 'payment.claimed', 'escrow.funded', 'escrow.defunded', 'agent.revoked'], onEvent })`, filtered to our device hashes and merchants; dedupe on `event.id`; save; push over SSE. Also backfill with `noir.getEvents({ startLedger })` from the last saved ledger.
+On boot: `noir.watch({ types: ['payment.authorized', 'payment.claimed', 'escrow.funded', 'escrow.defunded', 'agent.revoked'], onEvent })`, filtered to our device hashes and merchants; dedupe on `event.id`; save; push over SSE. `watch`'s `fromLedger` is the last saved ledger, which also covers the backfill (the SDK drains to the latest ledger before it starts polling).
+
+SDK patch: Testnet RPC no longer sends `inSuccessfulContractCall`, and SDK 0.3.0's `decodeEvent` dropped every event without it, so `watch`, `getEvents` and `pastEvents` returned nothing. `patches/` changes that one check to drop only events marked `false`. Remove the patch when the SDK ships a fix.
 
 ### Claim
 `/pos` has a "Collect payments" button per merchant: `getPendingBalance` → `claim({ merchant, token: asset })`. (Tier 3: run it on a 60 s timer.)

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@noirx402/agent-sdk@0.3.0': 1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50
+
 importers:
 
   .:
@@ -13,7 +16,7 @@ importers:
         version: 0.1.0-alpha.4
       '@noirx402/agent-sdk':
         specifier: ^0.3.0
-        version: 0.3.0(@stellar/stellar-sdk@16.4.1)
+        version: 0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)
       '@stellar/stellar-sdk':
         specifier: ^16.4.1
         version: 16.4.1
@@ -38,7 +41,7 @@ importers:
     dependencies:
       '@noirx402/agent-sdk':
         specifier: ^0.3.0
-        version: 0.3.0(@stellar/stellar-sdk@16.4.1)
+        version: 0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)
       '@stellar/stellar-sdk':
         specifier: ^16.4.1
         version: 16.4.1
@@ -88,7 +91,7 @@ importers:
     dependencies:
       '@noirx402/agent-sdk':
         specifier: ^0.3.0
-        version: 0.3.0(@stellar/stellar-sdk@16.4.1)
+        version: 0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)
       '@stellar/stellar-sdk':
         specifier: ^16.4.1
         version: 16.4.1
@@ -1193,7 +1196,7 @@ snapshots:
 
   '@noble/hashes@2.4.0': {}
 
-  '@noirx402/agent-sdk@0.3.0(@stellar/stellar-sdk@16.4.1)':
+  '@noirx402/agent-sdk@0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)':
     dependencies:
       '@stellar/stellar-sdk': 16.4.1
 

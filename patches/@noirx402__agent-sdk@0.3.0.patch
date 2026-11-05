@@ -1,0 +1,13 @@
+diff --git a/dist/events.js b/dist/events.js
+index 517dd09bcfe24e83f853bea24591aea5775fecd1..a1204f356df4e3a5f3b30d8859ac8b377b607da2 100644
+--- a/dist/events.js
++++ b/dist/events.js
+@@ -26,7 +26,7 @@ const amount = (v) => BigInt(scValToNative(v));
+  * known Noir events (other contracts, failed calls, future event kinds).
+  */
+ export function decodeEvent(raw, contracts) {
+-    if (!raw.inSuccessfulContractCall)
++    if (raw.inSuccessfulContractCall === false)
+         return null;
+     const contractId = raw.contractId?.contractId();
+     const which = Object.keys(contracts).find((k) => contracts[k] === contractId);
