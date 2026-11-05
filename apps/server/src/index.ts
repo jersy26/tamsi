@@ -4,6 +4,7 @@ import { createNoirChain, createTamsi, deviceHashFromUid } from '@tamsi/agent'
 import { createApp, type Services } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createStore, openDb, seedDemo } from './db.ts'
+import { createFeed } from './feed.ts'
 
 async function buildServices(): Promise<Services> {
   const config = loadConfig()
@@ -25,7 +26,8 @@ async function buildServices(): Promise<Services> {
   })
   const store = createStore(db)
   const chain = createNoirChain(noir, config.agent)
-  return { config, noir, store, tamsi: createTamsi({ store, chain }) }
+  const feed = createFeed({ noir, store, phpPerXlm: config.phpPerXlm })
+  return { config, noir, store, tamsi: createTamsi({ store, chain }), feed }
 }
 
 let services: Services | null = null
@@ -39,3 +41,4 @@ const port = Number(process.env.PORT) || 3000
 createApp(services).listen(port, () => {
   console.log(`Tamsi server listening on :${port} (Node ${process.version})`)
 })
+void services?.feed.start()

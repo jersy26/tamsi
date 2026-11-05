@@ -2,20 +2,23 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { fromStroops, normalizeDeviceHash, toStroops, type NoirAgentClient } from '@noirx402/agent-sdk'
-import { deviceHashFromUid, explorerTxUrl, type createTamsi } from '@tamsi/agent'
-import type { TapResponse } from '@tamsi/shared'
+import { deviceHashFromUid, explorerTxUrl, phDayStart, type createTamsi } from '@tamsi/agent'
+import type { CardDetail, TapResponse } from '@tamsi/shared'
 import type { Config } from './config.ts'
 import type { Store } from './db.ts'
+import type { Feed } from './feed.ts'
+import { toMoney } from './money.ts'
 
 export interface Services {
   config: Config
   noir: NoirAgentClient
   store: Store
   tamsi: ReturnType<typeof createTamsi>
+  feed: Feed
 }
 
 const WEB_DIST = resolve(import.meta.dirname, '../../web/dist')
-const STROOPS_PER_XLM_SQUARED = 10n ** 14n
+const STREAM_HEARTBEAT_MS = 25_000
 
 async function xlmBalance(address: string): Promise<string | null> {
   const res = await fetch(`https://horizon-testnet.stellar.org/accounts/${address}`)
@@ -45,6 +48,14 @@ function parseTapBody(body: unknown): { deviceHash: string; merchantId: string; 
   }
 }
 
+function parseDeviceHash(raw: string): string | null {
+  try {
+    return normalizeDeviceHash(raw)
+  } catch {
+    return null
+  }
+}
+
 // `services` is null until the env is set, so a bare deploy still answers /api/health.
 export function createApp(services: Services | null) {
   const app = express()
@@ -55,7 +66,7 @@ export function createApp(services: Services | null) {
       res.status(503).json({ ok: false, node: process.version, configured: false })
       return
     }
-    const { config, noir } = services
+    const { config, noir, feed } = services
     const deviceHash = deviceHashFromUid(config.demoCardUid)
     const [agent, treasury, escrow, policy] = await Promise.allSettled([
       xlmBalance(config.agent.publicKey),
@@ -75,11 +86,13 @@ export function createApp(services: Services | null) {
         escrowXlm: escrowStroops === null ? null : fromStroops(escrowStroops),
         policyRegistered: settledValue(policy) !== null,
       },
+      watcher: feed.status(),
     })
   })
 
   if (services) {
-    const { config, store, tamsi } = services
+    const { config, noir, store, tamsi, feed } = services
+    const money = (stroops: bigint) => toMoney(stroops, config.phpPerXlm)
 
     app.get('/api/merchants', (_req, res) => {
       res.json(store.listMerchants())
@@ -89,6 +102,70 @@ export function createApp(services: Services | null) {
       res.json(store.listCards())
     })
 
+    app.get('/api/cards/:hash', async (req, res) => {
+      const deviceHash = parseDeviceHash(req.params.hash)
+      const card = deviceHash && store.getCardDetail(deviceHash)
+      if (!card) {
+        res.status(404).json({ error: 'Card not found' })
+        return
+      }
+      const [balanceResult] = await Promise.allSettled([noir.getEscrowBalance(card.deviceHash)])
+      if (balanceResult.status === 'rejected') console.error('Could not read the card balance:', balanceResult.reason)
+      const balance = settledValue(balanceResult)
+
+      const spentToday = store.spentSince(card.deviceHash, phDayStart(new Date()))
+      const capLeft = spentToday < card.dailyCap ? card.dailyCap - spentToday : 0n
+      const aboveIpon = balance !== null && balance > card.iponFloor ? balance - card.iponFloor : 0n
+      const leftLimitedByIpon = balance !== null && aboveIpon < capLeft
+
+      const body: CardDetail = {
+        deviceHash: card.deviceHash,
+        label: card.label,
+        holderName: card.holderName,
+        status: card.status,
+        maxPerTap: money(card.maxPerTap),
+        expiresAt: card.expiresAt,
+        rules: {
+          dailyCap: money(card.dailyCap),
+          iponFloor: money(card.iponFloor),
+          allowedCategories: card.allowedCategories,
+          nextPayday: card.nextPayday,
+        },
+        balance: balance === null ? null : money(balance),
+        iponKept: balance === null ? null : money(balance < card.iponFloor ? balance : card.iponFloor),
+        spentToday: money(spentToday),
+        leftToday: money(leftLimitedByIpon ? aboveIpon : capLeft),
+        leftLimitedByIpon,
+        feed: feed.list(card.deviceHash),
+      }
+      res.json(body)
+    })
+
+    app.get('/api/stream/:hash', (req, res) => {
+      const deviceHash = parseDeviceHash(req.params.hash)
+      if (!deviceHash || !store.getCard(deviceHash)) {
+        res.status(404).json({ error: 'Card not found' })
+        return
+      }
+      res.set({
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      })
+      res.flushHeaders()
+      res.write(': connected\n\n')
+      const unsubscribe = feed.subscribe(deviceHash, (item) => {
+        res.write(`event: feed\ndata: ${JSON.stringify(item)}\n\n`)
+      })
+      // Proxies drop a quiet connection, and a dashboard left open is mostly quiet.
+      const heartbeat = setInterval(() => res.write(': ping\n\n'), STREAM_HEARTBEAT_MS)
+      req.on('close', () => {
+        clearInterval(heartbeat)
+        unsubscribe()
+      })
+    })
+
     app.post('/api/taps', async (req, res) => {
       const tap = parseTapBody(req.body)
       if ('error' in tap) {
@@ -96,13 +173,15 @@ export function createApp(services: Services | null) {
         return
       }
       const outcome = await tamsi.tap(tap)
+      if (outcome.txHash) feed.tapSaved(outcome.txHash)
+      const { xlm: amountXlm, php: amountPhp } = money(tap.amount)
       const body: TapResponse = {
         id: outcome.id,
         decision: outcome.decision,
         reasonCode: outcome.reasonCode,
         reasonText: outcome.reasonText,
-        amountXlm: fromStroops(tap.amount),
-        amountPhp: config.phpPerXlm === null ? null : ((tap.amount * config.phpPerXlm) / STROOPS_PER_XLM_SQUARED).toString(),
+        amountXlm,
+        amountPhp,
         merchantName: outcome.merchant?.name ?? 'Unknown shop',
         checks: outcome.checks,
         txHash: outcome.txHash,

@@ -11,7 +11,7 @@
     "dev": "pnpm --parallel --filter @tamsi/server --filter @tamsi/web dev",
     "build": "pnpm --filter @tamsi/web build && pnpm typecheck",
     "start": "tsx --env-file-if-exists=.env apps/server/src/index.ts",
-    "test": "tsx --test \"packages/**/*.test.ts\"",
+    "test": "tsx --test \"packages/**/*.test.ts\" \"apps/server/src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p .",
     "fund:demo": "tsx --env-file-if-exists=.env scripts/fund-demo.ts"
   },

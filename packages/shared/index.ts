@@ -1,4 +1,5 @@
 export * from './categories.ts'
 export * from './demo.ts'
+export * from './feed.ts'
 export * from './reasons.ts'
 export * from './types.ts'

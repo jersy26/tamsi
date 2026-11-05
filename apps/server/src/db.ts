@@ -4,8 +4,17 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { toStroops, type NoirAgentPolicy } from '@noirx402/agent-sdk'
-import { DEMO_CARD, DEMO_MERCHANTS, DEMO_RULES, type CardStatus, type CardSummary, type Category, type MerchantSummary } from '@tamsi/shared'
+import { eventToJSON, toStroops, type NoirAgentPolicy, type NoirEvent } from '@noirx402/agent-sdk'
+import {
+  DEMO_CARD,
+  DEMO_MERCHANTS,
+  DEMO_RULES,
+  type CardStatus,
+  type CardSummary,
+  type Category,
+  type FeedEventType,
+  type MerchantSummary,
+} from '@tamsi/shared'
 import type { AgentCard, AgentMerchant, TapStore } from '@tamsi/agent'
 
 const SCHEMA = `
@@ -135,10 +144,15 @@ export function seedDemo(db: DatabaseSync, input: SeedInput): void {
 
 interface CardRow {
   device_hash: string
+  label: string
+  holder_name: string
   status: CardStatus
+  max_per_tap: string
+  expires_at: string | null
   daily_cap: string
   ipon_floor: string
   allowed_categories: string
+  next_payday: string
 }
 
 interface MerchantRow {
@@ -148,9 +162,26 @@ interface MerchantRow {
   stellar_address: string
 }
 
+// A Noir event as saved in noir_events.payload: eventToJSON's output, amounts as strings.
+export interface StoredNoirEvent {
+  id: string
+  type: FeedEventType
+  deviceHash?: string
+  merchant?: string
+  amount?: string
+  ledger: number
+  ledgerClosedAt: string
+  txHash: string
+}
+
+function parseNoirEvents(rows: unknown): StoredNoirEvent[] {
+  return (rows as { payload: string }[]).map((row) => JSON.parse(row.payload) as StoredNoirEvent)
+}
+
 export function createStore(db: DatabaseSync) {
   const cardQuery = db.prepare(
-    `SELECT c.device_hash, c.status, r.daily_cap, r.ipon_floor, r.allowed_categories
+    `SELECT c.device_hash, c.label, c.holder_name, c.status, c.max_per_tap, c.expires_at,
+            r.daily_cap, r.ipon_floor, r.allowed_categories, r.next_payday
      FROM cards c JOIN rules r ON r.device_hash = c.device_hash WHERE c.device_hash = ?`,
   )
   const merchantQuery = db.prepare('SELECT id, name, category, stellar_address FROM merchants WHERE id = ?')
@@ -162,6 +193,16 @@ export function createStore(db: DatabaseSync) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
 
+  const noirEventInsert = db.prepare('INSERT OR IGNORE INTO noir_events (id, type, payload, ledger) VALUES (?, ?, ?, ?)')
+  const noirEventsForCard = db.prepare(
+    `SELECT payload FROM noir_events
+     WHERE json_extract(payload, '$.deviceHash') = ? OR json_extract(payload, '$.deviceHash') IS NULL
+     ORDER BY ledger DESC, id DESC LIMIT ?`,
+  )
+  const noirEventsForTx = db.prepare(`SELECT payload FROM noir_events WHERE json_extract(payload, '$.txHash') = ?`)
+  const merchantByAddress = db.prepare('SELECT id, name, category, stellar_address FROM merchants WHERE stellar_address = ?')
+  const tapReason = db.prepare('SELECT reason_text FROM taps WHERE tx_hash = ?')
+
   const store = {
     getCard(deviceHash: string): AgentCard | null {
       const row = cardQuery.get(deviceHash) as unknown as CardRow | undefined
@@ -172,6 +213,23 @@ export function createStore(db: DatabaseSync) {
         dailyCap: BigInt(row.daily_cap),
         iponFloor: BigInt(row.ipon_floor),
         allowedCategories: JSON.parse(row.allowed_categories) as Category[],
+      }
+    },
+    // Everything the OFW screen shows about a card; amounts are still stroops.
+    getCardDetail(deviceHash: string) {
+      const row = cardQuery.get(deviceHash) as unknown as CardRow | undefined
+      if (!row) return null
+      return {
+        deviceHash: row.device_hash,
+        label: row.label,
+        holderName: row.holder_name,
+        status: row.status,
+        maxPerTap: BigInt(row.max_per_tap),
+        expiresAt: row.expires_at,
+        dailyCap: BigInt(row.daily_cap),
+        iponFloor: BigInt(row.ipon_floor),
+        allowedCategories: JSON.parse(row.allowed_categories) as Category[],
+        nextPayday: row.next_payday,
       }
     },
     getMerchant(id: string): AgentMerchant | null {
@@ -198,6 +256,31 @@ export function createStore(db: DatabaseSync) {
         new Date().toISOString(),
       )
       return id
+    },
+    getMerchantByAddress(address: string): AgentMerchant | null {
+      const row = merchantByAddress.get(address) as unknown as MerchantRow | undefined
+      if (!row) return null
+      return { id: row.id, name: row.name, category: row.category, stellarAddress: row.stellar_address }
+    },
+    tapReasonByTx(txHash: string): string | null {
+      return (tapReason.get(txHash) as unknown as { reason_text: string } | undefined)?.reason_text ?? null
+    },
+    // Null when this event id is already saved: that is the dedupe.
+    saveNoirEvent(event: NoirEvent): StoredNoirEvent | null {
+      const payload = JSON.stringify(eventToJSON(event))
+      const { changes } = noirEventInsert.run(event.id, event.type, payload, event.ledger)
+      return changes === 0 ? null : (JSON.parse(payload) as StoredNoirEvent)
+    },
+    lastNoirLedger(): number | null {
+      const row = db.prepare('SELECT MAX(ledger) AS ledger FROM noir_events').get() as unknown as { ledger: number | null }
+      return row.ledger
+    },
+    // Newest first. A merchant's claim names no card, so it belongs to every card's feed.
+    listNoirEvents(deviceHash: string, limit: number): StoredNoirEvent[] {
+      return parseNoirEvents(noirEventsForCard.all(deviceHash, limit))
+    },
+    noirEventsByTx(txHash: string): StoredNoirEvent[] {
+      return parseNoirEvents(noirEventsForTx.all(txHash))
     },
     listMerchants(): MerchantSummary[] {
       return db.prepare('SELECT id, name, category FROM merchants ORDER BY rowid').all() as unknown as MerchantSummary[]
