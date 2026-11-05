@@ -1,11 +1,11 @@
 # Tamsi — Session Handoff
 
-**Date:** 2026-11-06, about 02:15 Philippine time (second session: Phase 1, built and deployed)
+**Date:** 2026-11-06, about 03:00 Philippine time (third session: Phase 2, all but real Velo keys)
 **Branch:** `main` at https://github.com/jersy26/tamsi (public). Run `git status -sb` to see whether this file's commit has been pushed.
-**Live:** https://tamsi-production.up.railway.app (Railway Trial plan, project `stunning-amazement`, running commit `78eb6c0`; later commits so far change docs only)
-**Deadline:** submissions close **Sat Nov 7, 12:00 PM**, about 34 hours after this was written. Aim to submit by 11:00 AM.
+**Live:** https://tamsi-production.up.railway.app (Railway Trial plan, project `stunning-amazement`; the dashboard shows "30 days or $5.00 left")
+**Deadline:** submissions close **Sat Nov 7, 12:00 PM**. Aim to submit by 11:00 AM.
 **Plan gates:** start Phase 3 only by Sat 12:00 AM, otherwise skip to Phase 4. Start Phase 4 by Sat 4:00 AM, wherever Phase 3 is.
-**Tests:** `pnpm test` (14 pass), `pnpm typecheck` passes, and all six Guarded tap checks passed as real taps on the live URL.
+**Tests:** `pnpm test` (32 pass), `pnpm typecheck` passes. The OFW feed passed with a real tap on the live URL. Padala has never run against real Velo.
 
 > **Next session: start with section 0 (To do), then work from one SDD section at a time.** Read `agents.md` first; its hard rules can disqualify the project.
 
@@ -13,29 +13,30 @@
 
 ## 0. To do
 
-### Next (code work): Phase 2
-1. `GET /api/cards/:hash`: card, rules, balance, spent today.
-2. `noir.watch` in the server with a `pastEvents` backfill, saved to `noir_events`, deduped on `event.id`, and pushed over SSE at `/api/stream/:hash`.
-3. `/ofw` page: left today, balance, ipon kept, live feed. Link it from the home page. Follow `docs/brands.md`.
-4. Once Velo keys exist: `/api/topups`, `/webhooks/velo` → `fundEscrow`, `/pay/success`, `/pay/cancel`.
+### Next: finish Phase 2 (blocked on the user's Velo project)
+The padala code is written and deployed, and stays off until the keys are set. Once they are:
+1. Open `/ofw`, send a small padala and pay it from a wallet. This is the first real test of `asset: 'native'`, the amount format and Velo's webhook payload.
+2. Check the page goes created → paid → funded, the balance rises, and a receipt lands on `/ofw`.
+3. Resend the webhook from Velo's dashboard if it offers that, to see it funds once. Open `/pay/success` before paying to see the redirect funds nothing.
+4. Tick the three Padala boxes in the PRD. That finishes Tier 1. Then Phase 3, subject to the gate above.
 
-Steps 1–3 don't need Velo. Phase 2 is done when every Tier 1 box in the PRD is checked on the live URL.
+If Velo keys are going to be late, tell the user rather than starting Tier 2: `agents.md` says no Tier 2 until every Tier 1 box is checked.
 
 ### Needs the user (cannot be done from here)
-- **Velo project:** create a Testnet project at velo-build.dev using the treasury wallet, `GBRFIH6D4FOG333NO43DRQ74AZLEQQCEI4KJ4H7EAKQ3ACRCUITNCU45`. Import `TREASURY_SECRET` from `.env` into a browser wallet to do it. Set the webhook URL to `https://tamsi-production.up.railway.app/webhooks/velo`. Put `VELO_API_KEY` and `VELO_WEBHOOK_SECRET` in `.env`, never in chat, and paste them into Railway's Raw Editor too. Blocks the top-up half of Phase 2.
-- **Railway GitHub App:** install it so pushes deploy (see "Open problems"). Limit it to the `tamsi` repo. Until then, new code needs a manual deploy.
-- **Railway Trial limits:** not checked. Make sure the plan lasts through Sunday's pitch.
+- **Velo project:** create a Testnet project at velo-build.dev using the treasury wallet, `GBRFIH6D4FOG333NO43DRQ74AZLEQQCEI4KJ4H7EAKQ3ACRCUITNCU45`. Import `TREASURY_SECRET` from `.env` into a browser wallet to do it. Set the webhook URL to `https://tamsi-production.up.railway.app/webhooks/velo`. Put `VELO_API_KEY` and `VELO_WEBHOOK_SECRET` in `.env`, never in chat, and paste them into Railway's Raw Editor too. Blocks the rest of Phase 2.
+- **Railway GitHub App:** install it so pushes deploy, limited to the `tamsi` repo. Confirmed needed: a push started no deployment in 4 minutes. Until then, deploy by hand: Railway dashboard → open the service → Ctrl+K → type "deploy latest" → Enter. Clicking the palette item often does nothing, so check for the "Deployment triggered" toast and a new BUILDING row, then check `/api/health` shows the new build.
+- **Noir SDK bug:** tell Noir in `#noir-sdk-and-extension` (see "SDK patch" below), and ask whether the patch is acceptable under the "Noir only through the SDK" rule.
 - **Discord handle:** still a TODO in `README.md`.
 
 ### Open problems
-- **Paid taps take about 22–25 s on the live URL.** Declines take 0.6–8 s. The counter says "Checking" the whole time, which is long for the demo video. The cause hasn't been looked into, and paid-tap time wasn't measured locally to compare.
-- **Pushes don't seem to redeploy.** One push had started no deployment about a minute later. Railway was linked by pasting the public repo URL, so its GitHub App isn't installed; that's the likely cause, not a confirmed one.
-- **Railway partial outage:** some networks block Railway IPs (https://status.railway.com/incident/QBCLHG1V, last update seen Nov 4, no fix date). The URL opens from this PC. Test it on phone data too before submitting. The Docker image can move to another host without code changes.
+- **SDK patch.** Testnet RPC no longer sends `inSuccessfulContractCall`, and `@noirx402/agent-sdk` 0.3.0 (the newest) drops every event without it, so `noir.watch`, `getEvents` and `pastEvents` returned nothing. `patches/@noirx402__agent-sdk@0.3.0.patch` changes that one check. All Noir calls still go through the SDK, with no raw RPC and no network override. The README must disclose it (Phase 4). A test in `apps/server/src/feed.test.ts` fails if the patch stops applying. Remove it if Noir ships a fix.
+- **Paid taps take about 21–29 s.** Measured 21 s from this PC and 29 s on the live URL, so it isn't Railway. One balance read took 1.3–4.8 s here, and a tap makes several reads plus a submit and confirmation polling, so the likely cause is RPC latency. The counter says "Checking" the whole time, which is long for the demo video. Consider saying what's happening at the counter, or trimming the wait in the video edit.
+- **A failed funding isn't retried.** If `fundEscrow` throws, the top-up becomes `fund_failed`, because the transaction may still have landed. Check Stellar Expert, then use `pnpm fund:demo` if it didn't. A restart between the 200 and the retrieve also loses that webhook: rule 7 forbids funding from a retrieve alone, so there's no poll on boot. Both are narrow, and acceptable for the demo.
+- **Railway partial outage:** some networks block Railway IPs (https://status.railway.com/incident/QBCLHG1V, the banner was still up Nov 6). The URL opens from this PC. Test it on phone data too before submitting. The Docker image can move to another host without code changes.
 - **`/api/taps` has no login.** Anyone with the URL can spend Testnet money, within the card's limits. That's acceptable for the demo, but the Phase 3 kill switch would let anyone turn the card off mid-judging. Decide how to guard it when building it.
 
 ### Check before relying on it
 - **Velo `asset: 'native'`:** SDD §3 assumes it, but the SDK types only say `string` and its README example uses `USDC`. Try it on the first checkout.
-- **Velo delivery id:** `agents.md` rule 6 dedupes on it. Where it comes from isn't confirmed; only the signature header `x-velo-signature` is. Read the webhook section of the Velo README, from about line 400 of 608.
 - **Velo SDK version:** `@alpha` is `0.1.0-alpha.4`, as `agents.md` requires. npm also lists `latest` as `1.0.0`, while the package's README says `latest` is `0.1.0-alpha.2`. Not looked into. Ask in the hackathon channel if it matters.
 - **Device hash:** we use the SHA-256 of the UID string, as hex. The SDK comments agree, but SDD §3 says to match Noir's NFC hashing doc, which hasn't been checked. It matters only for a real tag (Tier 3).
 
@@ -47,8 +48,9 @@ Steps 1–3 don't need Velo. Phase 2 is done when every Tier 1 box in the PRD is
 | :-- | :-- |
 | `packages/shared` | Reason codes and their sentences (`reasons.ts`), categories, shared types, demo family data (`demo.ts`). |
 | `packages/agent` | `decide.ts` (SDD §3 checks), `queue.ts` (per-card queue), `tamsi.ts` (ties them together and saves the tap), `noir.ts` (Noir SDK calls), unit tests. |
-| `apps/server` | Express: `/api/health`, `/api/merchants`, `/api/cards`, `/api/taps`; serves the web build. `db.ts` holds all SDD §4 tables and an idempotent seed that also runs at boot, so the Railway volume seeds itself. `topups`, `noir_events` and `velo_deliveries` exist but nothing uses them yet. |
-| `apps/web` | Vite + React: `/` and `/pos`. No router. |
+| `apps/server` | Express: `/api/health`, `/api/merchants`, `/api/cards`, `/api/cards/:hash`, `/api/stream/:hash`, `/api/taps`, `/api/topups`, `/webhooks/velo`; serves the web build. `feed.ts` is `noir.watch` → `noir_events` → SSE. `topups.ts` is checkout and webhook funding, created only when the Velo keys are set. `db.ts` holds all SDD §4 tables and an idempotent seed that also runs at boot, so the Railway volume seeds itself. |
+| `apps/web` | Vite + React: `/`, `/pos`, `/ofw`, `/pay/success`, `/pay/cancel`. No router. |
+| `patches/` | One-line fix to the Noir SDK's event filter. See "SDK patch". |
 | `Dockerfile` | The deploy image, Node 24.22.1. Runs through `tsx`, so `pnpm build` builds the web app and only typechecks the server. |
 | `scripts/setup.ts` | SDD §3 setup steps 1–6, in one rerunnable command. Also fills `SQLITE_PATH` and `DEMO_PHP_PER_XLM`. |
 | `scripts/fund-demo.ts` | `pnpm fund:demo 60`: treasury funds the card by hand. A developer tool, not reachable from the server. |
@@ -58,9 +60,9 @@ Steps 1–3 don't need Velo. Phase 2 is done when every Tier 1 box in the PRD is
 
 **`.env`:** everything is set except `VELO_API_KEY` and `VELO_WEBHOOK_SECRET`.
 
-**Demo card now:** 23.5 XLM on the card, only 3.5 above the floor. Per-tap max 10, daily cap 25, ipon floor 20, all in XLM (`packages/shared/demo.ts`). Demo rate ₱50 per XLM.
+**Demo card now:** 31.5 XLM on the card, 11.5 above the floor. Per-tap max 10, daily cap 25, ipon floor 20, all in XLM (`packages/shared/demo.ts`). Demo rate ₱50 per XLM.
 
-**Live spend today:** 16 of the 25 XLM cap. It resets at Philippine midnight. Before recording, wait for the reset and refill the card with Velo padala or `pnpm fund:demo`.
+**Live spend today (Nov 6):** 16.5 of the 25 XLM cap. It resets at Philippine midnight. Before recording, wait for the reset and refill the card with Velo padala or `pnpm fund:demo`.
 
 **Proved on the live URL:**
 
@@ -75,9 +77,15 @@ Steps 1–3 don't need Velo. Phase 2 is done when every Tier 1 box in the PRD is
 
 Today's spend also survived a Railway redeploy, so the volume works.
 
+**Feed, on the live URL:** a 0.5 XLM tap reached `/api/stream` about 4 s after the tap answered (https://stellar.expert/explorer/testnet/tx/f366f29faf1dc2079b2f4e64c3d287444f015d7a7e4587d8c4d39483eaa8e5b7). A hand funding with `pnpm fund:demo` showed as a receipt too (https://stellar.expert/explorer/testnet/tx/e31781c1fc942e4f7a580c0800eddb1b4b02ddcc7093eb87e217d4ffb304c705). A restart resumed without duplicates. With Velo off, `/webhooks/velo` and `/api/topups` answer 503 and `/ofw` hides the form.
+
+**Padala is tested only without real Velo:** unit and HTTP tests use the SDK's real signature check with a fake Velo (`apps/server/src/topups.test.ts`), and a fake key got `invalid_api_key` from Velo's real API. No checkout has ever opened. `Funded` on `/pay/success` has only been seen with a seeded database row.
+
+**Receipts wording:** taps made on another database (a local server, for example) show the plain "Paid X at Y." on the live feed, because the agent's sentence lives in that server's `taps` table.
+
 **Agent pays, on the live URL:** https://stellar.expert/explorer/testnet/tx/c16968ef017896a0d1a94ee6e94da7f5afed13c1a26f24a77fa5de45609a1929
 
-**Not done:** Phases 2–5. Only the six Guarded tap boxes in the PRD are ticked. The top-up request on `ipon_floor` and low balance is Phase 3. `README.md` still has its TODOs (Phase 4), and the "Testnet proof" section should use the link above.
+**Not done:** the rest of Phase 2 (the three Padala boxes need real keys), then Phases 3–5. The six Guarded tap boxes and the OFW feed box in the PRD are ticked. The top-up request on `ipon_floor` and low balance is Phase 3. `README.md` still has its TODOs (Phase 4), and the "Testnet proof" section should use the link above.
 
 ---
 
