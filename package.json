@@ -7,16 +7,21 @@
   },
   "scripts": {
     "setup:testnet": "tsx --env-file-if-exists=.env scripts/setup.ts",
-    "spike": "tsx --env-file-if-exists=.env scripts/spike.ts"
+    "spike": "tsx --env-file-if-exists=.env scripts/spike.ts",
+    "dev": "pnpm --parallel --filter @tamsi/server --filter @tamsi/web dev",
+    "build": "pnpm typecheck",
+    "start": "tsx --env-file-if-exists=.env apps/server/src/index.ts",
+    "test": "tsx --test \"packages/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@carts1024/velo-sdk": "0.1.0-alpha.4",
     "@noirx402/agent-sdk": "^0.3.0",
-    "@stellar/stellar-sdk": "^16.4.1"
+    "@stellar/stellar-sdk": "^16.4.1",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
 }
