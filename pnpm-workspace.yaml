@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+fetchTimeout: 900000
+fetchRetries: 5
+networkConcurrency: 4
+allowBuilds:
+  esbuild: true
