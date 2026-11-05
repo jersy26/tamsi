@@ -2,6 +2,7 @@
 // screen, readable at arm's length. All decisions and wording come from the server.
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CHECK_LABELS, type CardSummary, type MerchantSummary, type TapResponse } from '@tamsi/shared'
+import { getJson } from './api.ts'
 
 type TapState =
   | { kind: 'idle' }
@@ -10,12 +11,6 @@ type TapState =
   | { kind: 'error'; message: string }
 
 const AMOUNT_PATTERN = /^\d+(\.\d{1,7})?$/
-
-async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(path)
-  if (!res.ok) throw new Error(`${path} answered ${res.status}`)
-  return (await res.json()) as T
-}
 
 function DecisionCard({ state }: { state: TapState }) {
   if (state.kind === 'idle') return null

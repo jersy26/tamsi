@@ -76,6 +76,12 @@ a {
   color: var(--mango-ink);
 }
 
+.button.secondary {
+  border: 2px solid var(--navy-line);
+  background: transparent;
+  color: var(--text);
+}
+
 .button:disabled {
   background: var(--navy-raised);
   color: var(--text-muted);
@@ -96,6 +102,11 @@ a {
 
 .steps li {
   margin-bottom: 10px;
+}
+
+.home-actions {
+  display: grid;
+  gap: 10px;
 }
 
 /* Counter */
@@ -238,4 +249,182 @@ a {
   padding: 6px 0;
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+/* OFW view: the three numbers first, readable one-handed at 360 px. */
+.ofw-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ofw-head h1 {
+  margin: 0;
+}
+
+.live {
+  flex: none;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.live::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.live.on::before {
+  background: #3ecf8e;
+}
+
+.numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.number {
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--navy-raised);
+}
+
+.number.lead {
+  grid-column: 1 / -1;
+}
+
+.number dt {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.number dd {
+  margin: 0;
+}
+
+.number-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.number.lead .number-value {
+  color: var(--mango);
+  font-size: 2.75rem;
+  line-height: 1.15;
+}
+
+.number-unit {
+  font-size: 0.55em;
+  font-weight: 700;
+}
+
+.number-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.rate-note {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.card-off {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--declined);
+  color: #fff;
+  font-weight: 600;
+}
+
+.feed-title {
+  margin: 0 0 4px;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.feed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receipt {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--navy-line);
+}
+
+.receipt:first-child {
+  border-top: 0;
+}
+
+.receipt-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--navy-line);
+  color: #fff;
+  font-weight: 800;
+}
+
+.receipt-icon.paid {
+  background: var(--approved);
+}
+
+.receipt-icon.funded {
+  background: var(--mango);
+  color: var(--mango-ink);
+}
+
+.receipt-icon.off {
+  background: var(--declined);
+}
+
+.receipt-body {
+  min-width: 0;
+}
+
+.receipt-text {
+  margin: 0;
+  font-weight: 500;
+}
+
+.receipt-meta {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.receipt-meta a {
+  display: inline-block;
+  padding: 6px 0;
+  font-weight: 600;
+}
+
+.feed-empty {
+  margin: 8px 0 0;
+  color: var(--text-muted);
 }

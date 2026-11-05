@@ -16,9 +16,14 @@ export function Home() {
           <strong>You see the receipt</strong>, with the reason for every yes and no.
         </li>
       </ol>
-      <a className="button primary" href="/pos">
-        Open the shop counter
-      </a>
+      <div className="home-actions">
+        <a className="button primary" href="/ofw">
+          See the family card
+        </a>
+        <a className="button secondary" href="/pos">
+          Open the shop counter
+        </a>
+      </div>
     </main>
   )
 }
