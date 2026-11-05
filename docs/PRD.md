@@ -38,7 +38,7 @@ Build Tier 1 completely before touching Tier 2. Tier 3 only if every Tier 2 box 
 - [ ] Duplicate webhook delivery funds once
 
 **OFW view.** `/ofw` shows left today, balance, savings kept, and a live feed of approved taps from `noir.watch`.
-- [ ] Approved tap appears on `/ofw` within ~10 s
+- [x] Approved tap appears on `/ofw` within ~10 s
 
 ### Tier 2 — should ship (Phase 3)
 - [ ] Declined taps appear in the OFW feed with their reason

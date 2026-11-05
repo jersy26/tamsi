@@ -51,7 +51,7 @@ Who pays the Velo checkout in the demo: any browser wallet (the Noir extension w
 ### Top-up (Velo → Noir)
 1. `POST /api/topups {deviceHash, amount}` → `velo.checkout.sessions.create({ amount, asset: 'native', description, successUrl, cancelUrl }, { idempotencyKey: topupId })`. Store `paymentIntentId → topup` (no metadata field; sessions expire in 30 min).
 2. Payer pays on Velo's hosted page; money lands in the treasury.
-3. `POST /webhooks/velo` (raw body): `Velo.webhooks.verify` → dedupe delivery id → `paymentIntents.retrieve(id)` is paid → `noir.execute(treasury, { kind: 'fundEscrow', deviceHash, token: asset, amount })` → topup `funded`, store tx hash.
+3. `POST /webhooks/velo` (raw body): `Velo.webhooks.verify` → dedupe delivery id (`x-velo-delivery` header) → `paymentIntents.retrieve(id)` is paid → `noir.execute(treasury, { kind: 'fundEscrow', deviceHash, token: asset, amount })` → topup `funded`, store tx hash.
 4. `/pay/success` shows "waiting for ledger confirmation" until the topup is `funded`.
 
 ### Tap (the agent decides)
@@ -103,11 +103,12 @@ Categories: `grocery`, `sari_sari`, `pharmacy`, `school`, `utilities`, `other`. 
 | Method | Path | Notes |
 | :-- | :-- | :-- |
 | GET | `/api/merchants`, `/api/cards` | Lists for the `/pos` pickers |
-| GET | `/api/cards/:hash` | Card, rules, balance, spent today |
+| GET | `/api/cards/:hash` | Card, rules, balance, spent today, recent receipts |
 | PATCH | `/api/cards/:hash/rules` | Edit off-chain rules (Tier 3 UI) |
 | POST | `/api/cards/:hash/kill` | Kill switch |
 | POST | `/api/taps` | Run the agent |
 | POST | `/api/topups` | Create Velo checkout |
+| GET | `/api/topups/:id` | Status for `/pay/success` to poll. Read only |
 | POST | `/api/merchants/:id/claim` | Claim pending |
 | GET | `/api/stream/:hash` | SSE: decisions, events, top-up requests |
 | POST | `/webhooks/velo` | raw body |
