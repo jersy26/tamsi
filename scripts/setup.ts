@@ -31,11 +31,15 @@ function writeEnv(values: Record<string, string>): void {
 }
 
 // Friendbot answers 400 for an account it already funded, which is fine on a rerun.
+// Horizon decides whether the account really exists, so we don't depend on its wording.
 async function friendbot(publicKey: string): Promise<'funded' | 'already funded'> {
   const res = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`)
   if (res.ok) return 'funded'
   const body = await res.text()
-  if (res.status === 400 && body.includes('createAccountAlreadyExist')) return 'already funded'
+  if (res.status === 400) {
+    const account = await fetch(`https://horizon-testnet.stellar.org/accounts/${publicKey}`)
+    if (account.ok) return 'already funded'
+  }
   throw new Error(`Friendbot failed for ${publicKey}: ${res.status} ${body.slice(0, 200)}`)
 }
 
