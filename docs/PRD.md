@@ -33,9 +33,9 @@ Build Tier 1 completely before touching Tier 2. Tier 3 only if every Tier 2 box 
 - [x] Two taps within 1 s can't both pass the daily cap
 
 **Padala top-up (Velo).** "Send padala" on `/ofw` opens a Velo checkout; the card is funded through Noir only after the verified `payment.succeeded` webhook and a retrieved intent showing paid.
-- [ ] Status goes created → paid → funded; balance rises
-- [ ] A browser redirect alone never marks it funded
-- [ ] Duplicate webhook delivery funds once
+- [x] Status goes created → paid → funded; balance rises
+- [x] A browser redirect alone never marks it funded
+- [x] Duplicate webhook delivery funds once
 
 **OFW view.** `/ofw` shows left today, balance, savings kept, and a live feed of approved taps from `noir.watch`.
 - [x] Approved tap appears on `/ofw` within ~10 s
