@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { test } from 'node:test'
-import { toStroops } from '@noirx402/agent-sdk'
+import { fromStroops, toStroops } from '@noirx402/agent-sdk'
 import { createApp, type Services } from './app.ts'
 import { createStore, openDb, seedDemo } from './db.ts'
 import { createTopups } from './topups.ts'
@@ -34,7 +34,10 @@ function setup(overrides: { intentStatus?: string; intentAmount?: string; fund?:
       },
     },
     paymentIntents: {
-      retrieve: async () => ({ status: overrides.intentStatus ?? 'paid', amount: overrides.intentAmount ?? '10.00' }),
+      retrieve: async (id: string) => ({
+        status: overrides.intentStatus ?? 'paid',
+        amount: overrides.intentAmount ?? fromStroops(store.getTopupByIntent(id)?.amount ?? 0n),
+      }),
     },
   } as unknown as Parameters<typeof createTopups>[0]['velo']
   const topups = createTopups({
