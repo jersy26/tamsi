@@ -41,10 +41,10 @@ Build Tier 1 completely before touching Tier 2. Tier 3 only if every Tier 2 box 
 - [x] Approved tap appears on `/ofw` within ~10 s
 
 ### Tier 2 — should ship (Phase 3)
-- [ ] Declined taps appear in the OFW feed with their reason
-- [ ] Agent top-up request: when balance runs low, the agent computes an amount (formula shown) and creates a Velo checkout link on `/ofw`
+- [x] Declined taps appear in the OFW feed with their reason
+- [x] Agent top-up request: when balance runs low, the agent computes an amount (formula shown) and creates a Velo checkout link on `/ofw`
 - [ ] Kill switch: revoke agent → withdraw full balance to OFW; next tap refused (`no_agent`)
-- [ ] "Collect payments" button claims a merchant's pending balance
+- [x] "Collect payments" button claims a merchant's pending balance
 
 ### Tier 3 — only if ahead
 - OFW approval for large taps (wait ≤ 90 s, else decline)
