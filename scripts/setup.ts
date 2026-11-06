@@ -3,6 +3,7 @@
 // Rerunnable: keys in .env are reused and each on-chain step first reads whether it's needed,
 // so a rerun after the kill switch re-registers the agent, and a Testnet reset rebuilds it all.
 // Secrets go to .env only; this script prints public keys and never a secret.
+import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { Keypair } from '@stellar/stellar-sdk'
 import { NoirAgentClient, fromStroops, keypairSigner, toStroops } from '@noirx402/agent-sdk'
@@ -12,7 +13,6 @@ import { openDb, seedDemo } from '../apps/server/src/db.ts'
 
 const ENV_PATH = '.env'
 const MERCHANT_IDS = ['grocery', 'pharmacy', 'arcade'] as const
-const DEFAULT_CARD_UID = 'tamsi-demo-card-1'
 const DEFAULT_SQLITE_PATH = 'tamsi.db'
 const DEFAULT_PHP_PER_XLM = '50'
 
@@ -57,7 +57,8 @@ const secrets = {
   TREASURY: secretFromEnv('TREASURY_SECRET'),
 }
 const merchants = merchantSecretsFromEnv()
-const cardUid = process.env.DEMO_CARD_UID || DEFAULT_CARD_UID
+// Card UIDs are global on Testnet, so a new setup needs its own or someone else owns the card.
+const cardUid = process.env.DEMO_CARD_UID || `tamsi-demo-${randomBytes(6).toString('hex')}`
 const sqlitePath = process.env.SQLITE_PATH || DEFAULT_SQLITE_PATH
 
 writeEnv({

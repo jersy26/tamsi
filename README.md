@@ -50,7 +50,7 @@ flowchart LR
 - SDK: `@noirx402/agent-sdk` 0.3.0
 - Contracts: `device_registry`, `agent_registry`, `payment_escrow` (the SDK's built-in `TESTNET`, Oct 24 deploy). No contract IDs in this repo, and no contracts deployed by us.
 - Methods and files:
-  - `execute(registerDevice)`, `execute(registerAgent)` — [scripts/setup.ts#L95](https://github.com/jersy26/tamsi/blob/main/scripts/setup.ts#L95), [#L104](https://github.com/jersy26/tamsi/blob/main/scripts/setup.ts#L104)
+  - `execute(registerDevice)`, `execute(registerAgent)` — [scripts/setup.ts#L95](https://github.com/jersy26/tamsi/blob/main/scripts/setup.ts#L95), [#L105](https://github.com/jersy26/tamsi/blob/main/scripts/setup.ts#L105)
   - `execute(fundEscrow)` (treasury, after a verified Velo payment) — [apps/server/src/index.ts#L39](https://github.com/jersy26/tamsi/blob/main/apps/server/src/index.ts#L39)
   - `checkPayment`, `authorizePayment`, `getEscrowBalance` — [packages/agent/noir.ts#L20-L24](https://github.com/jersy26/tamsi/blob/main/packages/agent/noir.ts#L20-L24), used by the checks in [packages/agent/decide.ts](https://github.com/jersy26/tamsi/blob/main/packages/agent/decide.ts)
   - `getPendingBalance`, `claim` — [apps/server/src/app.ts#L249-L255](https://github.com/jersy26/tamsi/blob/main/apps/server/src/app.ts#L249-L255)

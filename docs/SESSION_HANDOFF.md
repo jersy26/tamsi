@@ -4,7 +4,7 @@
 **Branch:** `main` at https://github.com/jersy26/tamsi (public). Run `git status -sb` to see whether this file's commit has been pushed.
 **Live:** https://tamsi-production.up.railway.app (Railway Trial plan, project `stunning-amazement`; the dashboard shows "30 days or $4.99 left")
 **Deadline:** submissions close **Sat Nov 7, 12:00 PM**. Aim to submit by 11:00 AM.
-**Plan gates:** feature freeze now. Bug fixes only (Phase 4).
+**Plan gates:** Phase 3 is done. Phase 4 is done except the two README TODOs (video link, Discord handle). Feature freeze: bug fixes only.
 **Tests:** `pnpm test` (51 pass), `pnpm typecheck` passes. Every Tier 1 and Tier 2 box passed on the live URL.
 
 > **Next session: start with section 0 (To do), then work from one SDD section at a time.** Read `agents.md` first; its hard rules can disqualify the project.
