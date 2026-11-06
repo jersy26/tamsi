@@ -3,12 +3,16 @@
 import { randomUUID } from 'node:crypto'
 import { Velo, type WebhookEvent } from '@carts1024/velo-sdk'
 import { fromStroops, toStroops } from '@noirx402/agent-sdk'
-import { SerialQueue, explorerTxUrl } from '@tamsi/agent'
+import { SerialQueue, explorerTxUrl, planTopup } from '@tamsi/agent'
+import { topupRequestText, type ReasonCode } from '@tamsi/shared'
 import type { Store, TopupRecord } from './db.ts'
 
 // SDD §3 assumes Velo takes this for XLM. Its docs only show USDC, so the first real
 // checkout has to confirm it.
 const VELO_ASSET = 'native'
+// Velo's checkouts expire after 30 minutes, so a request is only open that long.
+export const CHECKOUT_LIFETIME_MS = 30 * 60 * 1000
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 export function createTopups(deps: {
   velo: Pick<Velo, 'checkout' | 'paymentIntents'>
@@ -16,8 +20,11 @@ export function createTopups(deps: {
   publicUrl: string
   store: Store
   fund(deviceHash: string, amount: bigint): Promise<string>
+  getBalance(deviceHash: string): Promise<bigint>
+  onRequested(topup: TopupRecord): void
 }) {
-  const { velo, webhookSecret, publicUrl, store, fund } = deps
+  const { velo, webhookSecret, publicUrl, store, fund, getBalance, onRequested } = deps
+  const requestQueue = new SerialQueue()
   // Treasury transactions share one sequence number, so they go one at a time.
   const treasuryQueue = new SerialQueue()
 
@@ -49,26 +56,67 @@ export function createTopups(deps: {
     }
   }
 
+  async function create(
+    deviceHash: string,
+    amount: bigint,
+    requestedBy: TopupRecord['requestedBy'],
+    reasonText: string | null = null,
+  ): Promise<TopupRecord> {
+    const id = randomUUID()
+    const session = await velo.checkout.sessions.create(
+      {
+        amount: fromStroops(amount),
+        asset: VELO_ASSET,
+        description: 'Padala to the family card',
+        successUrl: `${publicUrl}/pay/success?topup=${id}`,
+        cancelUrl: `${publicUrl}/pay/cancel`,
+      },
+      { idempotencyKey: id },
+    )
+    return store.createTopup({
+      id,
+      deviceHash,
+      amount,
+      requestedBy,
+      paymentIntentId: session.paymentIntentId,
+      checkoutUrl: session.checkoutUrl,
+      reasonText,
+    })
+  }
+
   return {
-    async create(deviceHash: string, amount: bigint, requestedBy: TopupRecord['requestedBy']): Promise<TopupRecord> {
-      const id = randomUUID()
-      const session = await velo.checkout.sessions.create(
-        {
-          amount: fromStroops(amount),
-          asset: VELO_ASSET,
-          description: 'Padala to the family card',
-          successUrl: `${publicUrl}/pay/success?topup=${id}`,
-          cancelUrl: `${publicUrl}/pay/cancel`,
-        },
-        { idempotencyKey: id },
-      )
-      return store.createTopup({
-        id,
-        deviceHash,
-        amount,
-        requestedBy,
-        paymentIntentId: session.paymentIntentId,
-        checkoutUrl: session.checkoutUrl,
+    create,
+
+    // After a tap: the agent asks for padala when the ipon stopped it, or when a payment left
+    // the card low. One open request at a time, so repeated taps don't pile up checkouts.
+    considerRequest(deviceHash: string, reasonCode: ReasonCode): Promise<TopupRecord | null> {
+      if (reasonCode !== 'ipon_floor' && reasonCode !== 'paid') return Promise.resolve(null)
+      return requestQueue.run(deviceHash, async () => {
+        const now = new Date()
+        if (store.openAgentTopup(deviceHash, new Date(now.getTime() - CHECKOUT_LIFETIME_MS))) return null
+        const card = store.getCardDetail(deviceHash)
+        if (!card || card.status !== 'active') return null
+        const balance = await getBalance(deviceHash)
+        const plan = planTopup({
+          spentLast7Days: store.spentSince(deviceHash, new Date(now.getTime() - WEEK_MS)),
+          dailyCap: card.dailyCap,
+          iponFloor: card.iponFloor,
+          balance,
+          nextPayday: new Date(card.nextPayday),
+          now,
+        })
+        if (reasonCode === 'paid' && !plan.low) return null
+        const text = topupRequestText({
+          amountXlm: fromStroops(plan.amount),
+          avgDailyXlm: fromStroops(plan.avgDailySpend),
+          days: plan.days.toString(),
+          iponXlm: fromStroops(card.iponFloor),
+          balanceXlm: fromStroops(balance),
+        })
+        const topup = await create(deviceHash, plan.amount, 'agent', text)
+        onRequested(topup)
+        console.log(`Agent requested padala: ${text}`)
+        return topup
       })
     },
 

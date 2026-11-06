@@ -486,3 +486,22 @@ a {
   margin: 10px 0 0;
   color: var(--text-muted);
 }
+
+/* The agent's request for padala */
+.topup-request {
+  margin: 0 0 24px;
+  padding: 16px;
+  border: 2px solid var(--mango);
+  border-radius: var(--radius);
+  background: var(--navy-raised);
+}
+
+.topup-request h2 {
+  margin: 0 0 6px;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.topup-request p {
+  margin: 0 0 14px;
+}

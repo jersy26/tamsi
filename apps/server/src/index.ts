@@ -44,6 +44,8 @@ async function buildServices(): Promise<Services> {
           })
           return hash
         },
+        getBalance: (cardHash) => noir.getEscrowBalance(cardHash),
+        onRequested: (topup) => feed.topupRequested(topup),
       })
     : null
   if (!topups) console.log('Velo keys not set: padala top-ups are off.')

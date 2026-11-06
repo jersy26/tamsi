@@ -8,7 +8,7 @@ import type { Config } from './config.ts'
 import type { Store, TopupRecord } from './db.ts'
 import type { Feed } from './feed.ts'
 import { toMoney } from './money.ts'
-import type { Topups } from './topups.ts'
+import { CHECKOUT_LIFETIME_MS, type Topups } from './topups.ts'
 
 export interface Services {
   config: Config
@@ -145,6 +145,7 @@ export function createApp(services: Services | null) {
       const aboveIpon = balance !== null && balance > card.iponFloor ? balance - card.iponFloor : 0n
       const leftLimitedByIpon = balance !== null && aboveIpon < capLeft
 
+      const openRequest = store.openAgentTopup(card.deviceHash, new Date(Date.now() - CHECKOUT_LIFETIME_MS))
       const body: CardDetail = {
         deviceHash: card.deviceHash,
         label: card.label,
@@ -165,6 +166,11 @@ export function createApp(services: Services | null) {
         leftLimitedByIpon,
         feed: feed.list(card.deviceHash),
         padalaEnabled: topups !== null,
+        topupRequest: openRequest && {
+          amount: money(openRequest.amount),
+          text: openRequest.reasonText ?? '',
+          checkoutUrl: openRequest.checkoutUrl,
+        },
       }
       res.json(body)
     })
@@ -264,6 +270,10 @@ export function createApp(services: Services | null) {
       const outcome = await tamsi.tap(tap)
       if (outcome.txHash) feed.tapSaved(outcome.txHash)
       else feed.tapDeclined(tap.deviceHash, outcome.id)
+      // Runs after the answer: a slow checkout shouldn't keep the counter waiting.
+      void topups?.considerRequest(tap.deviceHash, outcome.reasonCode).catch((err) => {
+        console.error('Could not create the agent top-up request:', err)
+      })
       const { xlm: amountXlm, php: amountPhp } = money(tap.amount)
       const body: TapResponse = {
         id: outcome.id,

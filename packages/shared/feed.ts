@@ -13,7 +13,7 @@ export const FEED_EVENT_TYPES = [
 export type FeedEventType = (typeof FEED_EVENT_TYPES)[number]
 
 // Chain events, plus what only this server knows: a declined tap never reaches the chain.
-export type FeedItemType = FeedEventType | 'tap.declined'
+export type FeedItemType = FeedEventType | 'tap.declined' | 'topup.requested'
 
 export interface FeedContext {
   amountXlm: string
@@ -52,4 +52,17 @@ const DECLINE_ADVICE: Record<Exclude<ReasonCode, 'paid'>, string> = {
 export function declinedText(code: ReasonCode, context: FeedContext): string {
   const advice = code === 'paid' ? '' : DECLINE_ADVICE[code]
   return `Declined ${context.amountXlm} XLM at ${context.merchantName}: ${advice}`
+}
+
+export interface TopupRequestContext {
+  amountXlm: string
+  avgDailyXlm: string
+  days: string
+  iponXlm: string
+  balanceXlm: string
+}
+
+// The formula filled in, so the OFW sees how the agent got its number.
+export function topupRequestText(c: TopupRequestContext): string {
+  return `The agent asks for ${c.amountXlm} XLM: ${c.avgDailyXlm} a day × ${c.days} days to payday + ${c.iponXlm} ipon − ${c.balanceXlm} on the card, rounded up (minimum 5).`
 }

@@ -82,6 +82,11 @@ export function openDb(path: string): DatabaseSync {
   const db = new DatabaseSync(path)
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;')
   db.exec(SCHEMA)
+  // The Railway volume already has this table, so new columns are added here.
+  const topupColumns = db.prepare('PRAGMA table_info(topups)').all() as unknown as { name: string }[]
+  for (const column of ['reason_text', 'created_at']) {
+    if (!topupColumns.some((existing) => existing.name === column)) db.exec(`ALTER TABLE topups ADD COLUMN ${column} TEXT`)
+  }
   return db
 }
 
@@ -185,6 +190,8 @@ export interface TopupRecord {
   status: TopupStatus
   checkoutUrl: string | null
   fundTxHash: string | null
+  reasonText: string | null
+  createdAt: string | null
 }
 
 interface TopupRow {
@@ -196,6 +203,8 @@ interface TopupRow {
   status: TopupStatus
   checkout_url: string | null
   fund_tx_hash: string | null
+  reason_text: string | null
+  created_at: string | null
 }
 
 function parseTopup(row: unknown): TopupRecord | null {
@@ -210,6 +219,8 @@ function parseTopup(row: unknown): TopupRecord | null {
     status: topup.status,
     checkoutUrl: topup.checkout_url,
     fundTxHash: topup.fund_tx_hash,
+    reasonText: topup.reason_text,
+    createdAt: topup.created_at,
   }
 }
 
@@ -256,10 +267,19 @@ export function createStore(db: DatabaseSync) {
      ORDER BY t.created_at DESC LIMIT ?`,
   )
   const topupInsert = db.prepare(
-    `INSERT INTO topups (id, device_hash, payment_intent_id, amount, requested_by, status, checkout_url)
-     VALUES (?, ?, ?, ?, ?, 'created', ?)`,
+    `INSERT INTO topups (id, device_hash, payment_intent_id, amount, requested_by, status, checkout_url, reason_text, created_at)
+     VALUES (?, ?, ?, ?, ?, 'created', ?, ?, ?)`,
   )
   const topupById = db.prepare('SELECT * FROM topups WHERE id = ?')
+  const openAgentTopups = db.prepare(
+    `SELECT * FROM topups
+     WHERE device_hash = ? AND requested_by = 'agent' AND status = 'created' AND created_at >= ?
+     ORDER BY created_at DESC LIMIT 1`,
+  )
+  const agentTopups = db.prepare(
+    `SELECT * FROM topups WHERE device_hash = ? AND requested_by = 'agent' AND created_at IS NOT NULL
+     ORDER BY created_at DESC LIMIT ?`,
+  )
   const topupByIntent = db.prepare('SELECT * FROM topups WHERE payment_intent_id = ?')
   const topupPaid = db.prepare(`UPDATE topups SET status = 'paid' WHERE id = ? AND status = 'created'`)
   const topupFunded = db.prepare(`UPDATE topups SET status = 'funded', fund_tx_hash = ? WHERE id = ?`)
@@ -361,9 +381,27 @@ export function createStore(db: DatabaseSync) {
     noirEventsByTx(txHash: string): StoredNoirEvent[] {
       return parseNoirEvents(noirEventsForTx.all(txHash))
     },
-    createTopup(topup: Pick<TopupRecord, 'id' | 'deviceHash' | 'amount' | 'requestedBy' | 'paymentIntentId' | 'checkoutUrl'>): TopupRecord {
-      topupInsert.run(topup.id, topup.deviceHash, topup.paymentIntentId, topup.amount.toString(), topup.requestedBy, topup.checkoutUrl)
+    createTopup(
+      topup: Pick<TopupRecord, 'id' | 'deviceHash' | 'amount' | 'requestedBy' | 'paymentIntentId' | 'checkoutUrl' | 'reasonText'>,
+    ): TopupRecord {
+      topupInsert.run(
+        topup.id,
+        topup.deviceHash,
+        topup.paymentIntentId,
+        topup.amount.toString(),
+        topup.requestedBy,
+        topup.checkoutUrl,
+        topup.reasonText,
+        new Date().toISOString(),
+      )
       return parseTopup(topupById.get(topup.id))!
+    },
+    // The agent's request that can still be paid. Velo's checkouts expire, so older ones don't count.
+    openAgentTopup(deviceHash: string, since: Date): TopupRecord | null {
+      return parseTopup(openAgentTopups.get(deviceHash, since.toISOString()))
+    },
+    listAgentTopups(deviceHash: string, limit: number): TopupRecord[] {
+      return (agentTopups.all(deviceHash, limit) as unknown[]).map((row) => parseTopup(row)!)
     },
     getTopup(id: string): TopupRecord | null {
       return parseTopup(topupById.get(id))

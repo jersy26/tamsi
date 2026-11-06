@@ -4,7 +4,7 @@
 import { fromStroops, type NoirAgentClient, type NoirEvent } from '@noirx402/agent-sdk'
 import { explorerTxUrl } from '@tamsi/agent'
 import { FEED_EVENT_TYPES, declinedText, feedText, type FeedItem } from '@tamsi/shared'
-import type { DeclinedTap, StoredNoirEvent, Store } from './db.ts'
+import type { DeclinedTap, StoredNoirEvent, Store, TopupRecord } from './db.ts'
 import { toMoney } from './money.ts'
 
 // RPC keeps about 7 days (~120,000 ledgers) and rejects older ones.
@@ -54,6 +54,23 @@ export function createFeed(deps: {
       amount: toMoney(tap.amount, phpPerXlm),
       at: tap.createdAt,
       explorerUrl: null,
+    }
+  }
+
+  function requestItem(topup: TopupRecord): FeedItem {
+    return {
+      id: `topup-${topup.id}`,
+      type: 'topup.requested',
+      text: topup.reasonText ?? '',
+      amount: toMoney(topup.amount, phpPerXlm),
+      at: topup.createdAt ?? new Date().toISOString(),
+      explorerUrl: null,
+    }
+  }
+
+  function pushToCard(deviceHash: string, item: FeedItem) {
+    for (const [listener, listenerHash] of listeners) {
+      if (listenerHash === deviceHash) listener(item)
     }
   }
 
@@ -121,6 +138,7 @@ export function createFeed(deps: {
       return [
         ...store.listNoirEvents(deviceHash, FEED_LENGTH).map(toItem),
         ...store.listDeclinedTaps(deviceHash, FEED_LENGTH).map(declinedItem),
+        ...store.listAgentTopups(deviceHash, FEED_LENGTH).map(requestItem),
       ]
         .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
         .slice(0, FEED_LENGTH)
@@ -129,11 +147,11 @@ export function createFeed(deps: {
     // A declined tap never reaches the chain, so the watcher won't see it.
     tapDeclined(deviceHash: string, tapId: string) {
       const tap = store.listDeclinedTaps(deviceHash, FEED_LENGTH).find((row) => row.id === tapId)
-      if (!tap) return
-      const item = declinedItem(tap)
-      for (const [listener, listenerHash] of listeners) {
-        if (listenerHash === deviceHash) listener(item)
-      }
+      if (tap) pushToCard(deviceHash, declinedItem(tap))
+    },
+
+    topupRequested(topup: TopupRecord) {
+      pushToCard(topup.deviceHash, requestItem(topup))
     },
 
     subscribe(deviceHash: string, listener: Listener): () => void {

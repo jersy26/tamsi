@@ -11,6 +11,7 @@ const RECEIPT_ICONS: Record<FeedItemType, { icon: string; className: string }> =
   'escrow.defunded': { icon: '↩', className: '' },
   'agent.revoked': { icon: '✕', className: 'off' },
   'tap.declined': { icon: '✕', className: 'declined' },
+  'topup.requested': { icon: '₱', className: 'funded' },
 }
 
 function formatPesos(php: string): string {
@@ -195,6 +196,15 @@ export function Ofw() {
             <NumberTile label="Ipon kept" money={card.iponKept} />
           </dl>
           {hasPesos && <p className="rate-note">Demo rate — Testnet XLM, no real money.</p>}
+          {card.topupRequest?.checkoutUrl && (
+            <section className="topup-request">
+              <h2>The agent is asking for padala</h2>
+              <p>{card.topupRequest.text}</p>
+              <a className="button primary" href={card.topupRequest.checkoutUrl}>
+                Pay {card.topupRequest.amount.xlm} XLM
+              </a>
+            </section>
+          )}
           {card.padalaEnabled && <SendPadala deviceHash={card.deviceHash} />}
 
           <h2 className="feed-title">Receipts</h2>

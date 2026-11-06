@@ -79,6 +79,8 @@ export interface CardDetail extends CardSummary {
   feed: FeedItem[]
   // False until the Velo keys are set, so the screen doesn't offer a checkout that can't open.
   padalaEnabled: boolean
+  // The agent's open request for more padala, if it has one.
+  topupRequest: { amount: Money; text: string; checkoutUrl: string | null } | null
 }
 
 export type TopupStatus = 'created' | 'paid' | 'funded' | 'fund_failed'

@@ -11,18 +11,19 @@ const CARD = 'a'.repeat(64)
 const SECRET = 'whsec_test'
 const TEN = toStroops('10')
 
-function setup(overrides: { intentStatus?: string; intentAmount?: string; fund?: () => Promise<string> } = {}) {
+function setup(overrides: { intentStatus?: string; intentAmount?: string; fund?: () => Promise<string>; balance?: string } = {}) {
   const db = openDb(':memory:')
   seedDemo(db, {
     deviceHash: CARD,
     ownerWallet: 'GOFW',
     agentPubkey: 'GAGENT',
     merchantAddresses: { grocery: 'GGROCERY', pharmacy: 'GPHARMACY', arcade: 'GARCADE' },
-    policy: null,
+    policy: undefined,
   })
   const store = createStore(db)
   const funded: { deviceHash: string; amount: bigint }[] = []
   const sessions: { params: Record<string, unknown>; options: unknown }[] = []
+  const requested: string[] = []
   const velo = {
     checkout: {
       sessions: {
@@ -46,8 +47,10 @@ function setup(overrides: { intentStatus?: string; intentAmount?: string; fund?:
       if (overrides.fund) return overrides.fund()
       return 'fund-tx'
     },
+    getBalance: async () => toStroops(overrides.balance ?? '21'),
+    onRequested: (topup) => requested.push(topup.id),
   })
-  return { store, topups, funded, sessions }
+  return { store, topups, funded, sessions, requested }
 }
 
 function paidEvent(paymentIntentId = 'pi_1', type = 'payment.succeeded') {
@@ -134,6 +137,28 @@ test('a signed event with odd metadata still funds, and only with a valid signat
   assert.equal(funded.length, 0)
   assert.equal(await deliver(topups, 'd1', payload), 200)
   assert.equal(funded.length, 1)
+})
+
+test('the ipon floor makes the agent ask once, with the formula filled in', async () => {
+  const { topups, sessions, store, requested } = setup()
+  const topup = await topups.considerRequest(CARD, 'ipon_floor')
+  assert.equal(topup?.requestedBy, 'agent')
+  assert.match(topup?.reasonText ?? '', /The agent asks for \d+ XLM: 12\.5 a day × \d+ days to payday \+ 20 ipon − 21 on the card/)
+  assert.equal(sessions.length, 1)
+  assert.deepEqual(requested, [topup?.id])
+  assert.equal(store.openAgentTopup(CARD, new Date(0))?.id, topup?.id)
+  // A second decline finds the open request and opens no new checkout.
+  assert.equal(await topups.considerRequest(CARD, 'ipon_floor'), null)
+  assert.equal(sessions.length, 1)
+})
+
+test('an agent request is only made for the ipon floor or a low balance after paying', async () => {
+  const rich = setup({ balance: '500' })
+  assert.equal(await rich.topups.considerRequest(CARD, 'paid'), null)
+  assert.equal(await rich.topups.considerRequest(CARD, 'merchant_not_allowed'), null)
+  assert.equal(rich.sessions.length, 0)
+  const low = setup({ balance: '21' })
+  assert.equal((await low.topups.considerRequest(CARD, 'paid'))?.requestedBy, 'agent')
 })
 
 test('a bad signature is refused and funds nothing', async () => {
