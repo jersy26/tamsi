@@ -120,6 +120,22 @@ test('a second delivery id for the same payment also funds once', async () => {
   assert.equal(funded.length, 1)
 })
 
+// Velo's real payment.succeeded failed the SDK's own check on its metadata fields.
+// patches/ relaxes that check; the signature and the retrieved intent still decide.
+test('a signed event with odd metadata still funds, and only with a valid signature', async () => {
+  const { topups, funded } = setup()
+  await topups.create(CARD, TEN, 'ofw')
+  const event = JSON.parse(paidEvent()) as { project: Record<string, unknown>; paymentIntent: Record<string, unknown> }
+  event.project.registryProjectId = null
+  event.paymentIntent.merchantName = null
+  const payload = JSON.stringify(event)
+  const forged = await topups.receiveWebhook({ payload, signature: sign(payload, 'wrong'), deliveryId: 'd0' })
+  assert.equal(forged.status, 400)
+  assert.equal(funded.length, 0)
+  assert.equal(await deliver(topups, 'd1', payload), 200)
+  assert.equal(funded.length, 1)
+})
+
 test('a bad signature is refused and funds nothing', async () => {
   const { topups, funded, store } = setup()
   const { id } = await topups.create(CARD, TEN, 'ofw')

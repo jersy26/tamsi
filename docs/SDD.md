@@ -76,6 +76,8 @@ On boot: `noir.watch({ types: ['payment.authorized', 'payment.claimed', 'escrow.
 
 SDK patch: Testnet RPC no longer sends `inSuccessfulContractCall`, and SDK 0.3.0's `decodeEvent` dropped every event without it, so `watch`, `getEvents` and `pastEvents` returned nothing. `patches/` changes that one check to drop only events marked `false`. Remove the patch when the SDK ships a fix.
 
+Velo SDK patch: real `payment.succeeded` events failed the SDK's check on metadata fields (`Invalid webhook event: project fields must be strings`), after the signature had passed. `patches/` drops those field checks and keeps `paymentIntent.id`. Signature verification is unchanged, and the amount and status still come from `paymentIntents.retrieve`.
+
 ### Claim
 `/pos` has a "Collect payments" button per merchant: `getPendingBalance` → `claim({ merchant, token: asset })`. (Tier 3: run it on a 60 s timer.)
 

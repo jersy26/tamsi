@@ -1,0 +1,28 @@
+diff --git a/dist/webhooks.js b/dist/webhooks.js
+index 99439554197361f58ee482880c156e8fb5b7408b..9b098722c188b247b83e5ecd44d0a2a9a87bce47 100644
+--- a/dist/webhooks.js
++++ b/dist/webhooks.js
+@@ -42,22 +42,10 @@ function parseWebhookEvent(payload) {
+     requireShape(typeof parsed.test === "boolean", "test must be a boolean");
+     requireShape(hasString(parsed, "sentAt"), "sentAt must be a string");
+     requireShape(isRecord(parsed.project), "project must be an object");
+-    requireShape(hasString(parsed.project, "id") &&
+-        hasString(parsed.project, "registryProjectId") &&
+-        hasString(parsed.project, "name") &&
+-        hasString(parsed.project, "slug"), "project fields must be strings");
+     const type = parsed.type;
+     if (type.startsWith("payment.") || type === "payment_access.activated") {
+         requireShape(isRecord(parsed.paymentIntent), "paymentIntent must be an object");
+-        for (const key of [
+-            "id",
+-            "amount",
+-            "asset",
+-            "merchantName",
+-            "status",
+-            "createdAt",
+-            "updatedAt",
+-        ]) {
++        for (const key of ["id"]) {
+             requireShape(hasString(parsed.paymentIntent, key), `paymentIntent.${key} must be a string`);
+         }
+     }

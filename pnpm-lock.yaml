@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@carts1024/velo-sdk@0.1.0-alpha.4': 32d4f238c3eaf9cd3166db9ce07731c433a87fbb5cb986b467d66de83be341d4
   '@noirx402/agent-sdk@0.3.0': 1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50
 
 importers:
@@ -13,7 +14,7 @@ importers:
     dependencies:
       '@carts1024/velo-sdk':
         specifier: 0.1.0-alpha.4
-        version: 0.1.0-alpha.4
+        version: 0.1.0-alpha.4(patch_hash=32d4f238c3eaf9cd3166db9ce07731c433a87fbb5cb986b467d66de83be341d4)
       '@noirx402/agent-sdk':
         specifier: ^0.3.0
         version: 0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)
@@ -41,7 +42,7 @@ importers:
     dependencies:
       '@carts1024/velo-sdk':
         specifier: 0.1.0-alpha.4
-        version: 0.1.0-alpha.4
+        version: 0.1.0-alpha.4(patch_hash=32d4f238c3eaf9cd3166db9ce07731c433a87fbb5cb986b467d66de83be341d4)
       '@noirx402/agent-sdk':
         specifier: ^0.3.0
         version: 0.3.0(patch_hash=1cbe877b342865a1db049ba86273c7d3ab8d1b03d9ca276a1f004df1d2935d50)(@stellar/stellar-sdk@16.4.1)
@@ -1115,7 +1116,7 @@ packages:
 
 snapshots:
 
-  '@carts1024/velo-sdk@0.1.0-alpha.4': {}
+  '@carts1024/velo-sdk@0.1.0-alpha.4(patch_hash=32d4f238c3eaf9cd3166db9ce07731c433a87fbb5cb986b467d66de83be341d4)': {}
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true
