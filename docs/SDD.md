@@ -59,7 +59,7 @@ Who pays the Velo checkout in the demo: any browser wallet (the Noir extension w
 
 | # | Check | Fail → |
 | :-- | :-- | :-- |
-| 1 | Card known and `status = active` | `card_inactive` |
+| 1 | Card known and `status = active`. A turned-off card asks `checkPayment`, read-only, so the refusal is Noir's own (BUILD-PLAN §5 step 7) | `card_inactive`, or Noir's `no_agent` |
 | 2 | Merchant category in the card's allowlist | `merchant_not_allowed` |
 | 3 | `spentToday + amount <= dailyCap` (PH day, UTC+8) | `daily_cap` |
 | 4 | `getEscrowBalance - amount >= iponFloor` | `ipon_floor` + top-up request |
@@ -82,7 +82,7 @@ Velo SDK patch: real `payment.succeeded` events failed the SDK's check on metada
 `/pos` has a "Collect payments" button per merchant: `getPendingBalance` → `claim({ merchant, token: asset })`. (Tier 3: run it on a 60 s timer.)
 
 ### Kill switch
-`POST /api/cards/:hash/kill` → `noir.execute(ofw, { kind: 'revokeAgent', deviceHash })` → `noir.execute(ofw, { kind: 'defundEscrow', deviceHash, token: asset, amount: balance })` → card `revoked`. Never revoke the device while escrow > 0. `setup.ts` re-registers the agent for the next demo run.
+`POST /api/cards/:hash/kill` (needs `KILL_SWITCH_PIN`, because the demo has no logins) → `noir.execute(ofw, { kind: 'revokeAgent', deviceHash })` → `noir.execute(ofw, { kind: 'defundEscrow', deviceHash, token: asset, amount: balance })` → card `revoked`. Never revoke the device while escrow > 0. `setup.ts` re-registers the agent for the next demo run.
 
 ## 4. Data model (SQLite)
 
@@ -92,7 +92,7 @@ Velo SDK patch: real `payment.succeeded` events failed the SDK's check on metada
 | `rules` | `device_hash` FK, `daily_cap`, `ipon_floor`, `allowed_categories` (JSON), `next_payday` |
 | `merchants` | `id` PK, `name`, `category`, `stellar_address` |
 | `taps` | `id` PK, `device_hash`, `merchant_id`, `amount`, `decision`, `reason_code`, `reason_text`, `nonce`, `tx_hash`, `created_at` |
-| `topups` | `id` PK, `device_hash`, `payment_intent_id` UNIQUE, `amount`, `requested_by` (`ofw`/`agent`), `status`, `checkout_url`, `fund_tx_hash` |
+| `topups` | `id` PK, `device_hash`, `payment_intent_id` UNIQUE, `amount`, `requested_by` (`ofw`/`agent`), `status`, `checkout_url`, `fund_tx_hash`, `reason_text` (the agent's formula), `created_at` |
 | `noir_events` | `id` PK, `type`, `payload`, `ledger` |
 | `velo_deliveries` | `delivery_id` PK |
 
@@ -141,6 +141,7 @@ Show a mocked peso figure next to XLM, labelled "Demo rate — Testnet XLM, no r
 | `SQLITE_PATH` | DB file on the Railway volume | e.g. `/data/tamsi.db` |
 | `PUBLIC_URL` | Live URL, used for Velo success/cancel URLs | Railway |
 | `DEMO_PHP_PER_XLM` | Mock display rate | Choose |
+| `KILL_SWITCH_PIN` | PIN for the kill switch on `/ofw`. The switch stays off without it | Choose |
 
 No contract IDs: the SDK's built-in `TESTNET` already points at the Oct 24 deploy.
 

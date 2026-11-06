@@ -505,3 +505,21 @@ a {
 .topup-request p {
   margin: 0 0 14px;
 }
+
+/* Kill switch */
+.button.danger {
+  background: var(--declined);
+  color: #fff;
+}
+
+.turn-off {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--navy-line);
+}
+
+.turn-off p {
+  margin: 0;
+}

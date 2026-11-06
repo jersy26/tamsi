@@ -53,6 +53,13 @@ export interface FeedItem {
   explorerUrl: string | null
 }
 
+// What /api/cards/:hash/kill returns.
+export interface KillResult {
+  returned: Money
+  revokeExplorerUrl: string | null
+  defundExplorerUrl: string | null
+}
+
 // What /api/merchants/:id/claim returns.
 export interface ClaimResult {
   collected: Money
@@ -79,6 +86,8 @@ export interface CardDetail extends CardSummary {
   feed: FeedItem[]
   // False until the Velo keys are set, so the screen doesn't offer a checkout that can't open.
   padalaEnabled: boolean
+  // False until a PIN is set on the server.
+  killEnabled: boolean
   // The agent's open request for more padala, if it has one.
   topupRequest: { amount: Money; text: string; checkoutUrl: string | null } | null
 }

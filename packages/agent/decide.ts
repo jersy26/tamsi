@@ -92,7 +92,17 @@ export async function decide(
   }
 
   const card = store.getCard(tap.deviceHash)
-  if (!card || card.status !== 'active') return decline('card_active', 'card_inactive')
+  if (!card) return decline('card_active', 'card_inactive')
+  if (card.status !== 'active') {
+    // Ask Noir, read-only, so the refusal is the contract's own. Nothing can be paid from here.
+    try {
+      const check = await chain.checkPayment({ deviceHash: card.deviceHash, amount: tap.amount })
+      if (!check.ok) return decline('card_active', check.reason)
+    } catch (err) {
+      console.error('Could not ask Noir about a turned-off card:', err)
+    }
+    return decline('card_active', 'card_inactive')
+  }
   checks.push({ id: 'card_active', ok: true })
 
   if (!merchant || !card.allowedCategories.includes(merchant.category)) {

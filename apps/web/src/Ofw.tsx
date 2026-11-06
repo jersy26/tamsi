@@ -1,7 +1,7 @@
 // The OFW's view: is my family okay, how much is left, did anything odd happen. Three
 // numbers, then the receipts. New receipts arrive over SSE; every number comes from the server.
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { CardDetail, CardSummary, FeedItem, FeedItemType, Money, TopupDetail } from '@tamsi/shared'
+import type { CardDetail, CardSummary, FeedItem, FeedItemType, KillResult, Money, TopupDetail } from '@tamsi/shared'
 import { getJson } from './api.ts'
 
 const RECEIPT_ICONS: Record<FeedItemType, { icon: string; className: string }> = {
@@ -89,6 +89,102 @@ function SendPadala({ deviceHash }: { deviceHash: string }) {
   )
 }
 
+type KillState =
+  | { kind: 'closed' }
+  | { kind: 'open'; error?: string }
+  | { kind: 'working' }
+  | { kind: 'done'; result: KillResult }
+
+// Stays mounted after the card goes off, so its confirmation and links don't vanish.
+function TurnOffCard({ deviceHash, active, onDone }: { deviceHash: string; active: boolean; onDone(): void }) {
+  const [state, setState] = useState<KillState>({ kind: 'closed' })
+  const [pin, setPin] = useState('')
+
+  async function turnOff(event: FormEvent) {
+    event.preventDefault()
+    setState({ kind: 'working' })
+    try {
+      const res = await fetch(`/api/cards/${deviceHash}/kill`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      })
+      if (res.status === 403) {
+        setState({ kind: 'open', error: "That PIN isn't right." })
+        return
+      }
+      if (!res.ok) throw new Error(`Kill answered ${res.status}`)
+      setState({ kind: 'done', result: (await res.json()) as KillResult })
+      setPin('')
+      onDone()
+    } catch {
+      setState({ kind: 'open', error: "It didn't finish. Try again; it picks up where it stopped." })
+    }
+  }
+
+  if (state.kind === 'closed') {
+    if (!active) return null
+    return (
+      <section className="turn-off">
+        <button className="button secondary" type="button" onClick={() => setState({ kind: 'open' })}>
+          Turn off this card
+        </button>
+      </section>
+    )
+  }
+  if (state.kind === 'done') {
+    const { result } = state
+    return (
+      <section className="turn-off" aria-live="polite">
+        <p>
+          <strong>The card is off.</strong> {result.returned.xlm} XLM came back to you.
+        </p>
+        {result.revokeExplorerUrl && (
+          <p>
+            <a href={result.revokeExplorerUrl} target="_blank" rel="noreferrer">
+              Spending turned off: View on Stellar Expert
+            </a>
+          </p>
+        )}
+        {result.defundExplorerUrl && (
+          <p>
+            <a href={result.defundExplorerUrl} target="_blank" rel="noreferrer">
+              Money returned: View on Stellar Expert
+            </a>
+          </p>
+        )}
+      </section>
+    )
+  }
+  return (
+    <form className="turn-off" onSubmit={turnOff}>
+      <p>This stops all spending right away and brings the whole balance back to you.</p>
+      <label className="padala-field">
+        <span>PIN</span>
+        <input
+          type="password"
+          autoComplete="off"
+          value={pin}
+          disabled={state.kind === 'working'}
+          onChange={(event) => setPin(event.target.value)}
+        />
+      </label>
+      {state.kind === 'open' && state.error && <p aria-live="polite">{state.error}</p>}
+      <button className="button danger" type="submit" disabled={state.kind === 'working' || !pin}>
+        {state.kind === 'working' ? 'Turning off… about a minute' : 'Turn off and bring the money back'}
+      </button>
+      <button
+        className="button secondary"
+        type="button"
+        disabled={state.kind === 'working'}
+        onClick={() => setState({ kind: 'closed' })}
+      >
+        Keep the card on
+      </button>
+    </form>
+  )
+}
+
 function Receipt({ item }: { item: FeedItem }) {
   const { icon, className } = RECEIPT_ICONS[item.type]
   return (
@@ -120,6 +216,7 @@ export function Ofw() {
   const [live, setLive] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const latestRequest = useRef(0)
+  const refreshCard = useRef<() => void>(() => {})
 
   useEffect(() => {
     let closed = false
@@ -140,6 +237,7 @@ export function Ofw() {
         const deviceHash = cards[0]?.deviceHash
         if (!deviceHash) throw new Error('No card yet')
         if (closed) return
+        refreshCard.current = () => void refresh(deviceHash).catch(() => {})
         stream = new EventSource(`/api/stream/${deviceHash}`)
         // Also fires on every reconnect, which picks up what patchy Wi-Fi missed.
         stream.onopen = () => {
@@ -170,6 +268,7 @@ export function Ofw() {
   }, [])
 
   const hasPesos = card?.balance?.php != null
+  const active = card?.status === 'active'
 
   return (
     <main className="page ofw">
@@ -196,7 +295,7 @@ export function Ofw() {
             <NumberTile label="Ipon kept" money={card.iponKept} />
           </dl>
           {hasPesos && <p className="rate-note">Demo rate — Testnet XLM, no real money.</p>}
-          {card.topupRequest?.checkoutUrl && (
+          {active && card.topupRequest?.checkoutUrl && (
             <section className="topup-request">
               <h2>The agent is asking for padala</h2>
               <p>{card.topupRequest.text}</p>
@@ -205,7 +304,7 @@ export function Ofw() {
               </a>
             </section>
           )}
-          {card.padalaEnabled && <SendPadala deviceHash={card.deviceHash} />}
+          {active && card.padalaEnabled && <SendPadala deviceHash={card.deviceHash} />}
 
           <h2 className="feed-title">Receipts</h2>
           {card.feed.length === 0 ? (
@@ -216,6 +315,9 @@ export function Ofw() {
                 <Receipt key={item.id} item={item} />
               ))}
             </ul>
+          )}
+          {card.killEnabled && (
+            <TurnOffCard deviceHash={card.deviceHash} active={active} onDone={() => refreshCard.current()} />
           )}
         </>
       )}

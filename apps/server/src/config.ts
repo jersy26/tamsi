@@ -12,6 +12,8 @@ export interface Config {
   sqlitePath: string
   // Stroops of pesos per XLM; null hides the peso figure.
   phpPerXlm: bigint | null
+  // Guards the kill switch, because the demo has no logins. Null leaves the switch off.
+  killPin: string | null
   // Null until the Velo project exists; everything else still runs without it.
   velo: { apiKey: string; webhookSecret: string; publicUrl: string } | null
 }
@@ -38,6 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     demoCardUid: env.DEMO_CARD_UID!,
     sqlitePath: env.SQLITE_PATH || 'tamsi.db',
     phpPerXlm: env.DEMO_PHP_PER_XLM ? toStroops(env.DEMO_PHP_PER_XLM) : null,
+    killPin: env.KILL_SWITCH_PIN || null,
     velo:
       env.VELO_API_KEY && env.VELO_WEBHOOK_SECRET && env.PUBLIC_URL
         ? {

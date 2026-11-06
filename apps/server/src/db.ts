@@ -242,6 +242,7 @@ export function createStore(db: DatabaseSync) {
             r.daily_cap, r.ipon_floor, r.allowed_categories, r.next_payday
      FROM cards c JOIN rules r ON r.device_hash = c.device_hash WHERE c.device_hash = ?`,
   )
+  const cardStatusUpdate = db.prepare('UPDATE cards SET status = ? WHERE device_hash = ?')
   const merchantQuery = db.prepare('SELECT id, name, category, stellar_address FROM merchants WHERE id = ?')
   const spentQuery = db.prepare(
     `SELECT amount FROM taps WHERE device_hash = ? AND decision = 'approved' AND created_at >= ?`,
@@ -314,6 +315,9 @@ export function createStore(db: DatabaseSync) {
         allowedCategories: JSON.parse(row.allowed_categories) as Category[],
         nextPayday: row.next_payday,
       }
+    },
+    setCardStatus(deviceHash: string, status: CardStatus): void {
+      cardStatusUpdate.run(status, deviceHash)
     },
     getMerchant(id: string): AgentMerchant | null {
       const row = merchantQuery.get(id) as unknown as MerchantRow | undefined

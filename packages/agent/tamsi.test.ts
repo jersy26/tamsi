@@ -90,12 +90,35 @@ test('allowed tap within limits pays through the chain', async () => {
   assert.equal(saved.length, 1)
 })
 
-test('unknown or revoked card is declined with no chain call', async () => {
-  for (const cards of [[], [card({ status: 'revoked' })]]) {
-    const { tamsi, calls } = harness({ cards })
+test('an unknown card is declined with no chain call', async () => {
+  const { tamsi, calls } = harness({ cards: [] })
+  const out = await tamsi.tap(tap('5'))
+  assert.equal(out.reasonCode, 'card_inactive')
+  assert.deepEqual(calls, { balance: 0, check: 0, authorize: 0 })
+})
+
+test("a turned-off card gets Noir's own refusal and can't pay", async () => {
+  const { tamsi, calls } = harness({
+    cards: [card({ status: 'revoked' })],
+    chain: { checkPayment: async () => ({ ok: false, reason: 'no_agent' }) },
+  })
+  const out = await tamsi.tap(tap('5'))
+  assert.equal(out.decision, 'declined')
+  assert.equal(out.reasonCode, 'no_agent')
+  assert.deepEqual(calls, { balance: 0, check: 1, authorize: 0 })
+})
+
+test('a turned-off card stays declined even if Noir says yes or the chain is down', async () => {
+  for (const checkPayment of [
+    async () => ({ ok: true as const }),
+    async () => {
+      throw new Error('rpc down')
+    },
+  ]) {
+    const { tamsi, calls } = harness({ cards: [card({ status: 'revoked' })], chain: { checkPayment } })
     const out = await tamsi.tap(tap('5'))
     assert.equal(out.reasonCode, 'card_inactive')
-    assert.deepEqual(calls, { balance: 0, check: 0, authorize: 0 })
+    assert.equal(calls.authorize, 0)
   }
 })
 

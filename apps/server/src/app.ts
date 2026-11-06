@@ -1,12 +1,14 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { fromStroops, keypairSigner, normalizeDeviceHash, toStroops, type NoirAgentClient } from '@noirx402/agent-sdk'
 import { XLM_ASSET, deviceHashFromUid, explorerTxUrl, phDayStart, type createTamsi } from '@tamsi/agent'
-import type { CardDetail, ClaimResult, TapResponse, TopupDetail } from '@tamsi/shared'
+import type { CardDetail, ClaimResult, KillResult, TapResponse, TopupDetail } from '@tamsi/shared'
 import type { Config } from './config.ts'
 import type { Store, TopupRecord } from './db.ts'
 import type { Feed } from './feed.ts'
+import { killCard } from './kill.ts'
 import { toMoney } from './money.ts'
 import { CHECKOUT_LIFETIME_MS, type Topups } from './topups.ts'
 
@@ -50,6 +52,13 @@ function parseTapBody(body: unknown): { deviceHash: string; merchantId: string; 
   } catch {
     return { error: 'deviceHash must be 32 bytes of hex' }
   }
+}
+
+// Hashed first, so the comparison takes the same time whatever the guess's length.
+function pinMatches(guess: unknown, pin: string): boolean {
+  if (typeof guess !== 'string') return false
+  const digest = (value: string) => createHash('sha256').update(value).digest()
+  return timingSafeEqual(digest(guess), digest(pin))
 }
 
 function parseDeviceHash(raw: string): string | null {
@@ -166,6 +175,7 @@ export function createApp(services: Services | null) {
         leftLimitedByIpon,
         feed: feed.list(card.deviceHash),
         padalaEnabled: topups !== null,
+        killEnabled: config.killPin !== null,
         topupRequest: openRequest && {
           amount: money(openRequest.amount),
           text: openRequest.reasonText ?? '',
@@ -173,6 +183,34 @@ export function createApp(services: Services | null) {
         },
       }
       res.json(body)
+    })
+
+    app.post('/api/cards/:hash/kill', async (req, res) => {
+      const deviceHash = parseDeviceHash(req.params.hash)
+      if (!deviceHash || !store.getCard(deviceHash)) {
+        res.status(404).json({ error: 'Card not found' })
+        return
+      }
+      if (config.killPin === null) {
+        res.status(503).json({ error: 'The kill switch is not set up' })
+        return
+      }
+      if (!pinMatches((req.body as { pin?: unknown } | undefined)?.pin, config.killPin)) {
+        res.status(403).json({ error: "That PIN isn't right" })
+        return
+      }
+      try {
+        const outcome = await tamsi.exclusive(deviceHash, () => killCard({ noir, ofw: config.ofw, store, deviceHash }))
+        const body: KillResult = {
+          returned: money(outcome.returned),
+          revokeExplorerUrl: outcome.revokeTxHash ? explorerTxUrl(outcome.revokeTxHash) : null,
+          defundExplorerUrl: outcome.defundTxHash ? explorerTxUrl(outcome.defundTxHash) : null,
+        }
+        res.json(body)
+      } catch (err) {
+        console.error('Kill switch failed:', err)
+        res.status(502).json({ error: 'The kill switch stopped partway. Try again; it picks up where it stopped.' })
+      }
     })
 
     app.get('/api/stream/:hash', (req, res) => {

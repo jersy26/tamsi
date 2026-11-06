@@ -18,5 +18,9 @@ export function createTamsi(deps: { store: TapStore; chain: Chain; now?: () => D
         return { ...decision, id: deps.store.saveTap(request, decision) }
       })
     },
+    // Runs between taps on this card, so nothing can pay during the kill switch.
+    exclusive<T>(deviceHash: string, task: () => Promise<T>): Promise<T> {
+      return queue.run(deviceHash, task)
+    },
   }
 }
