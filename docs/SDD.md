@@ -125,7 +125,7 @@ Categories: `grocery`, `sari_sari`, `pharmacy`, `school`, `utilities`, `other`. 
 | `/pos` | Pick merchant, amount, "Tap card" (type/select UID; Web NFC on Android is Tier 3); big decision card; "Collect payments" | `/` |
 | `/pay/success`, `/pay/cancel` | Velo return; success polls top-up status | `/ofw` |
 
-Show a mocked peso figure next to XLM, labelled "Demo rate — Testnet XLM, no real money".
+Amounts lead with a mocked peso figure, with XLM beside it. The keypads take pesos and send the XLM it comes to, so the API stays in XLM. The result card says "demo rate"; the PM removed the "Demo rate — Testnet XLM, no real money" note and the Testnet banner on Nov 7.
 
 ## 7. Environment variables
 

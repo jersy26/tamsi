@@ -22,17 +22,17 @@
 Before recording, make sure the card is on (`/ofw` shows no "turned off" notice) and has plenty on it. Today's spend resets at Philippine midnight.
 
 ### Demo video amounts
-Set up for a card holding 35 XLM with little spent today (`pnpm defund:demo` and `pnpm fund:demo` set the balance). Each paid tap adds to today's spend, so a re-take may need different amounts.
+Set up for a card holding 35 XLM (₱1,750) with little spent today (`pnpm defund:demo` and `pnpm fund:demo` set the balance, in XLM). Each paid tap adds to today's spend, so a re-take may need different amounts. The keypads take pesos, at ₱50 per XLM.
 
 | Step | Do | Result |
 | :-- | :-- | :-- |
-| 1 | Send padala, 5, paid from Account 1 (`GBB553…`) | Funded; balance 40 |
-| 2 | Aling Nena's, 5 | Approved |
-| 3 | Games arcade, 5 | Declined `merchant_not_allowed`, no chain call |
-| 4 | Aling Nena's, 21 | Declined `daily_cap` |
-| 5 | Aling Nena's, 12 | Declined by Noir's `over_limit` |
-| 6 | Aling Nena's, 16 | Declined `ipon_floor`; the agent's request appears on `/ofw` |
-| 7 | Turn off this card, with the PIN | 35 XLM returned; the next tap gets `no_agent` |
+| 1 | Send padala, ₱250, paid from Account 1 (`GBB553…`) | Funded; balance ₱2,000 |
+| 2 | Aling Nena's, ₱250 | Approved |
+| 3 | Games arcade, ₱250 | Declined `merchant_not_allowed`, no chain call |
+| 4 | Aling Nena's, ₱1,050 | Declined `daily_cap` |
+| 5 | Aling Nena's, ₱600 | Declined by Noir's `over_limit` |
+| 6 | Aling Nena's, ₱800 | Declined `ipon_floor`; the agent's request appears on `/ofw` |
+| 7 | Turn off, with the PIN | ₱1,750 returned; the next tap gets `no_agent` |
 
 **Turn the card back on after recording,** or judges will find it off.
 

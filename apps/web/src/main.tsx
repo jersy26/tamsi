@@ -17,7 +17,6 @@ function Page() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <div className="testnet-banner">Testnet — demo money</div>
     <Page />
   </StrictMode>,
 )

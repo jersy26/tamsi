@@ -118,4 +118,4 @@ docs/             Plan files, screenshots, Testnet proof
 Peso cash-out once Velo's Philippine settlement or Noir's PDAX bridge goes live; merchant allowlist on-chain if Noir adds it to `AgentPolicy`; OFW approval for large taps; a rules editor; the OFW signing the kill switch in their own wallet; multiple family cards per OFW.
 
 ## Credits
-`@noirx402/agent-sdk`, `@carts1024/velo-sdk`, `@stellar/stellar-sdk`, Express, React, Vite, tsx, TypeScript, pnpm, Plus Jakarta Sans. Hosted on Railway. Built with Claude Code.
+`@noirx402/agent-sdk`, `@carts1024/velo-sdk`, `@stellar/stellar-sdk`, Express, React, Vite, tsx, TypeScript, pnpm. Hosted on Railway. Built with Claude Code.

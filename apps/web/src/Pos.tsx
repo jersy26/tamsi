@@ -1,8 +1,9 @@
-// The shop counter: pick the shop, enter the amount, tap. The agent's answer fills the
-// screen, readable at arm's length. All decisions and wording come from the server.
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { CHECK_LABELS, type CardSummary, type ClaimResult, type MerchantSummary, type TapResponse } from '@tamsi/shared'
+// The shop counter: pick the shop, enter the amount, tap. The agent's answer takes the top of
+// the screen, readable at arm's length. All decisions and wording come from the server.
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { formatMoney, pesosToXlm, withCommas, type CardSummary, type ClaimResult, type MerchantSummary, type TapResponse } from '@tamsi/shared'
 import { getJson } from './api.ts'
+import { Decision, Header, Keypad, typeKey } from './parts.tsx'
 
 type TapState =
   | { kind: 'idle' }
@@ -10,55 +11,40 @@ type TapState =
   | { kind: 'done'; result: TapResponse }
   | { kind: 'error'; message: string }
 
-const AMOUNT_PATTERN = /^\d+(\.\d{1,7})?$/
+const XLM_PATTERN = /^\d+(\.\d{1,7})?$/
+const PESO_PATTERN = /^\d+(\.\d{1,2})?$/
 
 function DecisionCard({ state }: { state: TapState }) {
   if (state.kind === 'idle') return null
   if (state.kind === 'waiting') {
     return (
-      <section className="decision waiting" aria-live="polite">
-        <div className="decision-word">
-          <span aria-hidden="true">⋯</span> Checking
-        </div>
-        <p className="decision-reason">The agent is checking this tap.</p>
-      </section>
+      <Decision kind="wt" icon="⋯" word="Checking">
+        <p className="dr">The agent is checking this tap.</p>
+      </Decision>
     )
   }
   if (state.kind === 'error') {
     return (
-      <section className="decision waiting" aria-live="polite">
-        <div className="decision-word">
-          <span aria-hidden="true">!</span> Try again
-        </div>
-        <p className="decision-reason">{state.message}</p>
-      </section>
+      <Decision kind="wt" icon="!" word="Try again">
+        <p className="dr">{state.message}</p>
+      </Decision>
     )
   }
   const { result } = state
   const approved = result.decision === 'approved'
   return (
-    <section className={`decision ${approved ? 'approved' : 'declined'}`} aria-live="polite">
-      <div className="decision-word">
-        <span aria-hidden="true">{approved ? '✓' : '✕'}</span> {approved ? 'Approved' : 'Declined'}
-      </div>
-      <p className="decision-amount">
-        {result.amountXlm} XLM
-        {result.amountPhp !== null && <span className="decision-php"> ≈ ₱{result.amountPhp} demo rate</span>}
+    <Decision kind={approved ? 'ok' : 'no'} icon={approved ? '✓' : '✕'} word={approved ? 'Approved' : 'Declined'}>
+      <p className="da">
+        {formatMoney({ xlm: result.amountXlm, php: result.amountPhp })}
+        {result.amountPhp !== null && <small> ≈ {result.amountXlm} XLM demo rate</small>}
       </p>
-      <p className="decision-reason">{result.reasonText}</p>
-      <ul className="checks">
-        {result.checks.map((check) => (
-          <li key={check.id} className={check.ok ? 'check-ok' : 'check-failed'}>
-            <span aria-hidden="true">{check.ok ? '✓' : '✕'}</span> {CHECK_LABELS[check.id]}
-          </li>
-        ))}
-      </ul>
+      <p className="dr">{result.reasonText}</p>
       {result.explorerUrl && (
-        <a className="explorer-link" href={result.explorerUrl} target="_blank" rel="noreferrer">
-          View on Stellar Expert
+        <a className="tx" href={result.explorerUrl} target="_blank" rel="noreferrer">
+          View on Stellar Expert ↗
         </a>
       )}
-    </section>
+    </Decision>
   )
 }
 
@@ -82,15 +68,15 @@ function CollectPayments({ merchant }: { merchant: MerchantSummary }) {
   }
 
   return (
-    <section className="collect" aria-live="polite">
-      <button className="button secondary" type="button" disabled={state.kind === 'working'} onClick={collect}>
+    <section className="coll" aria-live="polite">
+      <button className="cta ghost" type="button" disabled={state.kind === 'working'} onClick={collect}>
         {state.kind === 'working' ? 'Collecting…' : `Collect payments for ${merchant.name}`}
       </button>
-      {state.kind === 'error' && <p className="collect-note">We couldn't collect right now. Try again in a moment.</p>}
-      {state.kind === 'done' && !state.result.explorerUrl && <p className="collect-note">Nothing to collect right now.</p>}
+      {state.kind === 'error' && <p>We couldn't collect right now. Try again in a moment.</p>}
+      {state.kind === 'done' && !state.result.explorerUrl && <p>Nothing to collect right now.</p>}
       {state.kind === 'done' && state.result.explorerUrl && (
-        <p className="collect-note">
-          Collected {state.result.collected.xlm} XLM.{' '}
+        <p>
+          Collected {formatMoney(state.result.collected)}.{' '}
           <a href={state.result.explorerUrl} target="_blank" rel="noreferrer">
             View on Stellar Expert
           </a>
@@ -119,23 +105,29 @@ export function Pos() {
       .catch(() => setLoadError("The counter couldn't load. Refresh to try again."))
   }, [])
 
-  // On a phone the answer lands below the fold; bring it to the person at the counter.
+  // On a phone the answer can land out of view; bring it to the person at the counter.
   useEffect(() => {
     if (state.kind === 'done' || state.kind === 'error') decisionRef.current?.scrollIntoView({ block: 'nearest' })
   }, [state])
 
-  const amountValid = AMOUNT_PATTERN.test(amount)
+  const rate = card?.phpPerXlm ?? null
+  const amountValid = (rate === null ? XLM_PATTERN : PESO_PATTERN).test(amount)
+  const amountXlm = rate !== null && amountValid ? pesosToXlm(amount, rate) : amount
   const canTap = Boolean(card && merchantId && amountValid) && state.kind !== 'waiting'
+  const selected = merchants.find((merchant) => merchant.id === merchantId)
+  const pressKey = useCallback(
+    (key: string) => setAmount((current) => typeKey(current, key, rate === null ? 7 : 2)),
+    [rate],
+  )
 
-  async function tap(event: FormEvent) {
-    event.preventDefault()
+  async function tap() {
     if (!card || !canTap) return
     setState({ kind: 'waiting' })
     try {
       const res = await fetch('/api/taps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceHash: card.deviceHash, merchantId, amount }),
+        body: JSON.stringify({ deviceHash: card.deviceHash, merchantId, amount: amountXlm }),
       })
       if (!res.ok) throw new Error(`Tap answered ${res.status}`)
       setState({ kind: 'done', result: (await res.json()) as TapResponse })
@@ -145,52 +137,71 @@ export function Pos() {
   }
 
   return (
-    <main className="page pos">
-      <h1>Shop counter</h1>
-      {loadError && <p className="load-error">{loadError}</p>}
-      <form onSubmit={tap}>
-        <fieldset className="merchants">
-          <legend>Shop</legend>
-          {merchants.map((merchant) => (
-            <label key={merchant.id} className={merchant.id === merchantId ? 'merchant selected' : 'merchant'}>
-              <input
-                type="radio"
-                name="merchant"
-                value={merchant.id}
-                checked={merchant.id === merchantId}
-                onChange={() => setMerchantId(merchant.id)}
-              />
-              {merchant.name}
-            </label>
-          ))}
-        </fieldset>
-
-        <label className="amount-field">
-          <span>Amount (XLM)</span>
-          <input
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="0"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value.trim())}
-          />
-        </label>
-
-        <button className="button primary tap-button" type="submit" disabled={!canTap}>
-          {state.kind === 'waiting' ? 'Checking…' : 'Tap card'}
-        </button>
-        {card && (
-          <p className="card-line">
-            {card.label} · {card.holderName}
-          </p>
-        )}
-      </form>
+    <main className="screen">
+      <Header title="Shop counter" back="/" />
+      {loadError && <p className="err">{loadError}</p>}
       <div ref={decisionRef}>
         <DecisionCard state={state} />
       </div>
-      {merchants.some((merchant) => merchant.id === merchantId) && (
-        <CollectPayments merchant={merchants.find((merchant) => merchant.id === merchantId)!} />
-      )}
+      <fieldset className="card shops">
+        <legend>Shop</legend>
+        {merchants.length === 0 && (
+          <>
+            <div className="skr" />
+            <div className="skr" />
+            <div className="skr" />
+          </>
+        )}
+        {merchants.map((merchant) => (
+          <label key={merchant.id} className={merchant.id === merchantId ? 'shop on' : 'shop'}>
+            <input
+              type="radio"
+              name="merchant"
+              value={merchant.id}
+              checked={merchant.id === merchantId}
+              onChange={() => setMerchantId(merchant.id)}
+            />
+            <u aria-hidden="true" />
+            {merchant.name}
+          </label>
+        ))}
+      </fieldset>
+
+      <button
+        className="gcard vi amount"
+        type="button"
+        aria-label="Change the amount"
+        disabled={state.kind !== 'done' && state.kind !== 'error'}
+        onClick={() => setState({ kind: 'idle' })}
+      >
+        <span className="wtop">
+          <b>Amount</b>
+          {card && (
+            <em>
+              {card.label} · {card.holderName}
+            </em>
+          )}
+        </span>
+        <span className={amount ? 'amt' : 'amt ph'}>
+          {rate === null ? (
+            <>
+              {amount || '0'}
+              <small> XLM</small>
+            </>
+          ) : (
+            <>
+              ₱{withCommas(amount || '0')}
+              {amountValid && <small> ≈ {amountXlm} XLM</small>}
+            </>
+          )}
+        </span>
+      </button>
+
+      {state.kind === 'idle' && <Keypad onKey={pressKey} />}
+      <button className="cta bt" type="button" disabled={!canTap} onClick={tap}>
+        {state.kind === 'waiting' ? 'Checking…' : 'Tap card'}
+      </button>
+      {selected && <CollectPayments merchant={selected} />}
     </main>
   )
 }
