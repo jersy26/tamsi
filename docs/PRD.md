@@ -43,7 +43,7 @@ Build Tier 1 completely before touching Tier 2. Tier 3 only if every Tier 2 box 
 ### Tier 2 — should ship (Phase 3)
 - [x] Declined taps appear in the OFW feed with their reason
 - [x] Agent top-up request: when balance runs low, the agent computes an amount (formula shown) and creates a Velo checkout link on `/ofw`
-- [ ] Kill switch: revoke agent → withdraw full balance to OFW; next tap refused (`no_agent`)
+- [x] Kill switch: revoke agent → withdraw full balance to OFW; next tap refused (`no_agent`)
 - [x] "Collect payments" button claims a merchant's pending balance
 
 ### Tier 3 — only if ahead

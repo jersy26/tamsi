@@ -70,7 +70,7 @@ flowchart LR
 - Agent authorize: https://stellar.expert/explorer/testnet/tx/c16968ef017896a0d1a94ee6e94da7f5afed13c1a26f24a77fa5de45609a1929
 - Treasury fund after Velo payment: https://stellar.expert/explorer/testnet/tx/242115457f117d5994c37b65d23feddc5c0cbddb080f026d879d2763baaa946e
 - Merchant claim: https://stellar.expert/explorer/testnet/tx/d68d6c2e38cc853949b7306b2c3649212a45d5bd271278c3765660b5861409d8
-- Kill switch, revoke then withdraw: TODO
+- Kill switch, revoke then withdraw: https://stellar.expert/explorer/testnet/tx/90aaf53d991f85ab41537e1d90fff450efd29e2db4da2df1530c0829149937d8, then https://stellar.expert/explorer/testnet/tx/0c187bed47cc6ac7e74cabbc7aa6d34ed63c28fae427a327f83c1a1e9e4ac0d4
 
 More in [docs/testnet-proof.md](docs/testnet-proof.md).
 
