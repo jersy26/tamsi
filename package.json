@@ -13,7 +13,8 @@
     "start": "tsx --env-file-if-exists=.env apps/server/src/index.ts",
     "test": "tsx --test \"packages/**/*.test.ts\" \"apps/server/src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p .",
-    "fund:demo": "tsx --env-file-if-exists=.env scripts/fund-demo.ts"
+    "fund:demo": "tsx --env-file-if-exists=.env scripts/fund-demo.ts",
+    "defund:demo": "tsx --env-file-if-exists=.env scripts/defund-demo.ts"
   },
   "dependencies": {
     "@carts1024/velo-sdk": "0.1.0-alpha.4",

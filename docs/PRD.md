@@ -70,9 +70,9 @@ Real pesos or cash-out (mocked and labelled), required NFC hardware, native mobi
 
 ## 7. Handbook requirements (all six must pass)
 
-- [ ] Agentic payment: the agent decides and makes the payment
-- [ ] Noir only through `@noirx402/agent-sdk`, on the deployed Testnet contracts
-- [ ] Velo SDK `@carts1024/velo-sdk@alpha` for checkout, payment status, signed webhooks
-- [ ] Stellar Testnet only
+- [x] Agentic payment: the agent decides and makes the payment
+- [x] Noir only through `@noirx402/agent-sdk`, on the deployed Testnet contracts
+- [x] Velo SDK `@carts1024/velo-sdk@alpha` for checkout, payment status, signed webhooks
+- [x] Stellar Testnet only
 - [ ] Public monorepo with the required README
-- [ ] Live website at a public URL
+- [x] Live website at a public URL

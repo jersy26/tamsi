@@ -110,7 +110,9 @@ docs/             Plan files, screenshots, Testnet proof
 | `KILL_SWITCH_PIN` | PIN for the kill switch on `/ofw`. The switch stays off without it | Choose |
 
 ## Screenshots
-TODO
+| The OFW's view, with the agent asking for padala | The shop counter, with a decline and its reason |
+| :-- | :-- |
+| <img src="docs/screenshots/ofw-agent-request.jpg" alt="The OFW view: left today, balance, ipon kept, and the agent's top-up request with its formula filled in" width="300"> | <img src="docs/screenshots/pos-declined.jpg" alt="The shop counter: a red Declined card saying Games arcade isn't on the card's allowed list" width="300"> |
 
 ## What's next
 Peso cash-out once Velo's Philippine settlement or Noir's PDAX bridge goes live; merchant allowlist on-chain if Noir adds it to `AgentPolicy`; OFW approval for large taps; a rules editor; the OFW signing the kill switch in their own wallet; multiple family cards per OFW.

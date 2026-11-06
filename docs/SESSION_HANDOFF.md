@@ -5,7 +5,7 @@
 **Live:** https://tamsi-production.up.railway.app (Railway Trial plan, project `stunning-amazement`; the dashboard shows "30 days or $4.99 left")
 **Deadline:** submissions close **Sat Nov 7, 12:00 PM**. Aim to submit by 11:00 AM.
 **Plan gates:** feature freeze now. Bug fixes only (Phase 4).
-**Tests:** `pnpm test` (50 pass), `pnpm typecheck` passes. Every Tier 1 and Tier 2 box passed on the live URL.
+**Tests:** `pnpm test` (51 pass), `pnpm typecheck` passes. Every Tier 1 and Tier 2 box passed on the live URL.
 
 > **Next session: start with section 0 (To do), then work from one SDD section at a time.** Read `agents.md` first; its hard rules can disqualify the project.
 
@@ -21,6 +21,21 @@
 
 Before recording, make sure the card is on (`/ofw` shows no "turned off" notice) and has plenty on it. Today's spend resets at Philippine midnight.
 
+### Demo video amounts
+Set up for a card holding 35 XLM with little spent today (`pnpm defund:demo` and `pnpm fund:demo` set the balance). Each paid tap adds to today's spend, so a re-take may need different amounts.
+
+| Step | Do | Result |
+| :-- | :-- | :-- |
+| 1 | Send padala, 5, paid from Account 1 (`GBB553…`) | Funded; balance 40 |
+| 2 | Aling Nena's, 5 | Approved |
+| 3 | Games arcade, 5 | Declined `merchant_not_allowed`, no chain call |
+| 4 | Aling Nena's, 21 | Declined `daily_cap` |
+| 5 | Aling Nena's, 12 | Declined by Noir's `over_limit` |
+| 6 | Aling Nena's, 16 | Declined `ipon_floor`; the agent's request appears on `/ofw` |
+| 7 | Turn off this card, with the PIN | 35 XLM returned; the next tap gets `no_agent` |
+
+**Turn the card back on after recording,** or judges will find it off.
+
 ### After the kill switch, to turn the card back on
 1. `pnpm setup:testnet` re-registers the agent (the device stays registered).
 2. Redeploy on Railway, because card status only syncs from the chain at boot.
@@ -28,7 +43,7 @@ Before recording, make sure the card is on (`/ofw` shows no "turned off" notice)
 
 ### Needs the user
 - **Noir SDK bug:** tell Noir in `#noir-sdk-and-extension`, and ask whether the patch is acceptable under the "Noir only through the SDK" rule. Same for Velo's webhook validator in the Velo channel.
-- **Railway GitHub App:** optional now. Without it, deploy by hand: Railway dashboard → open the service → Ctrl+K → type "deploy latest" → Enter, in one go. Check for a new BUILDING row.
+- **Railway GitHub App:** optional now. Without it, deploy by hand: Railway dashboard → open the service → click the page, Ctrl+K, click "Deploy latest commit". Check for a new BUILDING row. The tool-driven route became unreliable, so a person should press it.
 - **Discord handle and video link:** still TODO in `README.md`.
 
 ### Open problems
@@ -57,7 +72,7 @@ Before recording, make sure the card is on (`/ofw` shows no "turned off" notice)
 | `patches/` | One-line fix to the Noir SDK's event filter. See "SDK patch". |
 | `Dockerfile` | The deploy image, Node 24.22.1. Runs through `tsx`, so `pnpm build` builds the web app and only typechecks the server. |
 | `scripts/setup.ts` | SDD §3 setup steps 1–6, in one rerunnable command. Also fills `SQLITE_PATH` and `DEMO_PHP_PER_XLM`. |
-| `scripts/fund-demo.ts` | `pnpm fund:demo 60`: treasury funds the card by hand. A developer tool, not reachable from the server. |
+| `scripts/fund-demo.ts`, `scripts/defund-demo.ts` | `pnpm fund:demo 60` and `pnpm defund:demo 24` set the card's balance by hand. Developer tools, not reachable from the server. |
 | `scripts/spike.ts`, `docs/testnet-proof.md` | Phase 0 proof. Each spike run overwrites the proof file. |
 
 **Railway setup:** Dockerfile build, volume at `/data`, target port 8080, region US West, 11 variables (`AGENT_SECRET`, `OFW_SECRET`, `TREASURY_SECRET`, `MERCHANT_SECRETS`, `DEMO_CARD_UID`, `DEMO_PHP_PER_XLM`, `SQLITE_PATH=/data/tamsi.db`, `PUBLIC_URL`, `VELO_API_KEY`, `VELO_WEBHOOK_SECRET`, `KILL_SWITCH_PIN`). Dashboard: https://railway.com/project/53c5e340-7385-4edd-a6a6-a885d79b8d11
