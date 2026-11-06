@@ -5,7 +5,8 @@
 **Live:** https://tamsi-production.up.railway.app (Railway Trial plan, project `stunning-amazement`; the dashboard shows "30 days or $4.99 left")
 **Deadline:** submissions close **Sat Nov 7, 12:00 PM**. Aim to submit by 11:00 AM.
 **Plan gates:** Phase 3 is done. Phase 4 is done except the two README TODOs (video link, Discord handle). Feature freeze: bug fixes only.
-**Tests:** `pnpm test` (51 pass), `pnpm typecheck` passes. Every Tier 1 and Tier 2 box passed on the live URL.
+**Design:** the Nov 7 redesign is live (floating cards, the bird, pesos first). `docs/wireframes.html` is the uncommitted mockup.
+**Tests:** `pnpm test` (57 pass), `pnpm typecheck` passes. Every Tier 1 and Tier 2 box passed on the live URL.
 
 > **Next session: start with section 0 (To do), then work from one SDD section at a time.** Read `agents.md` first; its hard rules can disqualify the project.
 
@@ -36,10 +37,20 @@ Set up for a card holding 35 XLM (₱1,750) with little spent today (`pnpm defun
 
 **Turn the card back on after recording,** or judges will find it off.
 
+### Kill switch plan for the video
+Step 7 is the first real run of the kill switch with the new screens, and it takes the card offline for judges until it's turned back on. Paying and declining are proven on the live URL; this isn't, on purpose.
+1. Record steps 1 to 6 first, and check them. A card can only be turned off once per recovery.
+2. Have the PIN ready: it's `KILL_SWITCH_PIN`, in `.env` and on Railway. The keypad takes digits, or type it on a laptop.
+3. In step 7, tap Turn off, enter the PIN, and tap "Turn off and bring the money back". It takes about a minute. Don't leave the page.
+4. Check: the banner says spending is off, "The card is off" shows two Stellar Expert links, and a tap gets `no_agent`.
+5. If it says "It didn't finish", tap the button again. It picks up where it stopped.
+6. Recover straight away, using the steps below. Allow 15 minutes, and finish before submitting.
+
 ### After the kill switch, to turn the card back on
 1. `pnpm setup:testnet` re-registers the agent (the device stays registered).
 2. Redeploy on Railway, because card status only syncs from the chain at boot.
 3. `pnpm fund:demo 60`. The withdrawn money stays with the OFW wallet.
+4. Check the live URL: `/ofw` shows no "turned off" notice and `/api/health` says `policyRegistered: true`, then tap ₱25 at Aling Nena's.
 
 ### Needs the user
 - **Noir SDK bug:** tell Noir in `#noir-sdk-and-extension`, and ask whether the patch is acceptable under the "Noir only through the SDK" rule. Same for Velo's webhook validator in the Velo channel.
