@@ -4,7 +4,7 @@ An AI agent that spends an OFW's padala for the family one card tap at a time �
 
 **Live website:** https://tamsi-production.up.railway.app
 **Demo video (2 min):** https://TODO
-**Team:** Jersylle Hannah B. Nismal (TODO Discord handle) — solo
+**Team:** Jersylle Hannah B. Nismal (Discord: jersy00053) — solo
 
 Testnet only: this is Testnet XLM, no real money. The peso figures use a mock demo rate, and peso cash-out isn't built.
 

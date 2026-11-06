@@ -16,9 +16,8 @@
 
 ### Next: Phase 5, ship
 1. Demo video, 2 minutes, following BUILD-PLAN §5. Add its link to the README.
-2. Discord handle in the README.
-3. Check the live URL in an incognito window and on phone data (Railway's network blocks).
-4. Submit, using the checklist in BUILD-PLAN §6.
+2. Check the live URL in an incognito window and on phone data (Railway's network blocks).
+3. Submit, using the checklist in BUILD-PLAN §6.
 
 Before recording, make sure the card is on (`/ofw` shows no "turned off" notice) and has plenty on it. Today's spend resets at Philippine midnight.
 
@@ -55,7 +54,7 @@ Step 7 is the first real run of the kill switch with the new screens, and it tak
 ### Needs the user
 - **Noir SDK bug:** tell Noir in `#noir-sdk-and-extension`, and ask whether the patch is acceptable under the "Noir only through the SDK" rule. Same for Velo's webhook validator in the Velo channel.
 - **Railway GitHub App:** optional now. Without it, deploy by hand: Railway dashboard → open the service → click the page, Ctrl+K, click "Deploy latest commit". Check for a new BUILDING row. The tool-driven route became unreliable, so a person should press it.
-- **Discord handle and video link:** still TODO in `README.md`.
+- **Video link:** still TODO in `README.md`.
 
 ### Open problems
 - **Two SDK patches.** `patches/` holds one for Noir (Testnet RPC dropped `inSuccessfulContractCall`, so the SDK discarded every event) and one for Velo (its validator refused real events on metadata fields, after the signature had passed). Both are disclosed in the README and have tests that fail if they stop applying.
