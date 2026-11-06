@@ -51,19 +51,19 @@ flowchart LR
 - Contracts: `device_registry`, `agent_registry`, `payment_escrow` (the SDK's built-in `TESTNET`, Oct 24 deploy). No contract IDs in this repo, and no contracts deployed by us.
 - Methods and files:
   - `execute(registerDevice)`, `execute(registerAgent)` — [scripts/setup.ts#L96](https://github.com/jersy26/tamsi/blob/main/scripts/setup.ts#L96), [#L105](https://github.com/jersy26/tamsi/blob/main/scripts/setup.ts#L105)
-  - `execute(fundEscrow)` (treasury, after a verified Velo payment) — [apps/server/src/index.ts#L39](https://github.com/jersy26/tamsi/blob/main/apps/server/src/index.ts#L39)
+  - `execute(fundEscrow)` (treasury, after a verified Velo payment) — [apps/server/src/index.ts#L42](https://github.com/jersy26/tamsi/blob/main/apps/server/src/index.ts#L42)
   - `checkPayment`, `authorizePayment`, `getEscrowBalance` — [packages/agent/noir.ts#L20-L24](https://github.com/jersy26/tamsi/blob/main/packages/agent/noir.ts#L20-L24), used by the checks in [packages/agent/decide.ts](https://github.com/jersy26/tamsi/blob/main/packages/agent/decide.ts)
-  - `getPendingBalance`, `claim` — [apps/server/src/app.ts#L249-L255](https://github.com/jersy26/tamsi/blob/main/apps/server/src/app.ts#L249-L255)
-  - `watch`, `getEvents` — [apps/server/src/feed.ts#L105-L107](https://github.com/jersy26/tamsi/blob/main/apps/server/src/feed.ts#L105-L107)
+  - `getPendingBalance`, `claim` — [apps/server/src/app.ts#L251-L257](https://github.com/jersy26/tamsi/blob/main/apps/server/src/app.ts#L251-L257)
+  - `watch`, `getEvents` — [apps/server/src/feed.ts#L111-L113](https://github.com/jersy26/tamsi/blob/main/apps/server/src/feed.ts#L111-L113)
   - `execute(revokeAgent)`, `execute(defundEscrow)` (kill switch) — [apps/server/src/kill.ts#L24-L33](https://github.com/jersy26/tamsi/blob/main/apps/server/src/kill.ts#L24-L33)
 - **SDK patch:** Testnet RPC no longer sends `inSuccessfulContractCall`, and SDK 0.3.0's `decodeEvent` dropped every event without it, so `watch`, `getEvents` and `pastEvents` returned nothing. [This one-line patch](patches/@noirx402__agent-sdk@0.3.0.patch) drops only events marked as failed. All Noir calls still go through the SDK.
 - Demo note: the OFW (device owner) key is held server-side for the demo; in production the OFW signs with the Noir extension.
 
 ## Velo integration
 - SDK: `@carts1024/velo-sdk` 0.1.0-alpha.4
-- Checkout sessions for padala top-ups and agent-requested top-ups — [apps/server/src/topups.ts#L66](https://github.com/jersy26/tamsi/blob/main/apps/server/src/topups.ts#L66)
-- `Velo.webhooks.verify` on the raw body, deduped on `x-velo-delivery` — [apps/server/src/topups.ts#L132](https://github.com/jersy26/tamsi/blob/main/apps/server/src/topups.ts#L132)
-- `paymentIntents.retrieve` must say paid, at the right amount, before funding. A browser redirect never funds anything — [apps/server/src/topups.ts#L37](https://github.com/jersy26/tamsi/blob/main/apps/server/src/topups.ts#L37)
+- Checkout sessions for padala top-ups and agent-requested top-ups — [apps/server/src/topups.ts#L70](https://github.com/jersy26/tamsi/blob/main/apps/server/src/topups.ts#L70)
+- `Velo.webhooks.verify` on the raw body, deduped on `x-velo-delivery` — [apps/server/src/topups.ts#L137](https://github.com/jersy26/tamsi/blob/main/apps/server/src/topups.ts#L137)
+- `paymentIntents.retrieve` must say paid, at the right amount, before funding. A browser redirect never funds anything — [apps/server/src/topups.ts#L41](https://github.com/jersy26/tamsi/blob/main/apps/server/src/topups.ts#L41)
 - **SDK patch:** real `payment.succeeded` events failed the SDK's validator on metadata fields (`project fields must be strings`) after the signature had passed. [This patch](patches/@carts1024__velo-sdk@0.1.0-alpha.4.patch) drops those field checks. Signature verification is unchanged.
 
 ## Testnet proof
