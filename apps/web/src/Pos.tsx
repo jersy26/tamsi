@@ -1,9 +1,9 @@
 // The shop counter: pick the shop, enter the amount, tap. The agent's answer takes the top of
 // the screen, readable at arm's length. All decisions and wording come from the server.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { formatMoney, pesosToXlm, withCommas, type CardSummary, type ClaimResult, type MerchantSummary, type TapResponse } from '@tamsi/shared'
+import { formatMoney, pesosToXlm, typeAmountKey, withCommas, type CardSummary, type ClaimResult, type MerchantSummary, type TapResponse } from '@tamsi/shared'
 import { getJson } from './api.ts'
-import { Decision, Header, Keypad, typeKey } from './parts.tsx'
+import { Decision, Header, Keypad } from './parts.tsx'
 
 type TapState =
   | { kind: 'idle' }
@@ -116,7 +116,7 @@ export function Pos() {
   const canTap = Boolean(card && merchantId && amountValid) && state.kind !== 'waiting'
   const selected = merchants.find((merchant) => merchant.id === merchantId)
   const pressKey = useCallback(
-    (key: string) => setAmount((current) => typeKey(current, key, rate === null ? 7 : 2)),
+    (key: string) => setAmount((current) => typeAmountKey(current, key, rate === null ? 7 : 2)),
     [rate],
   )
 

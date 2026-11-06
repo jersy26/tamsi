@@ -2,9 +2,9 @@
 // first, then the actions, then the receipts. New receipts arrive over SSE; every number comes
 // from the server. Send padala and Turn off open their own sheets on this same page.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { formatMoney, percentOf, pesosToXlm, withCommas, type CardDetail, type CardSummary, type FeedItem, type FeedItemType, type KillResult, type Money, type TopupDetail } from '@tamsi/shared'
+import { formatMoney, percentOf, pesosToXlm, typeAmountKey, typePinKey, withCommas, type CardDetail, type CardSummary, type FeedItem, type FeedItemType, type KillResult, type Money, type TopupDetail } from '@tamsi/shared'
 import { getJson } from './api.ts'
-import { Bird, Header, Icon, Keypad, typeKey } from './parts.tsx'
+import { Bird, Header, Icon, Keypad } from './parts.tsx'
 
 const RECEIPT_ICONS: Record<FeedItemType, { icon: string; className: string }> = {
   'payment.authorized': { icon: '✓', className: 'lm' },
@@ -22,14 +22,15 @@ function formatTime(iso: string): string {
 
 // The line is a meter: the marker sits at spent ÷ the day's limit.
 const WAVE_WIDTH = 348
-const BUBBLE_WIDTH = 150
+// The bubble stops short of the bird on Left today, however much is spent.
+const BUBBLE_MAX_LEFT = 70
 const waveY = (x: number) => 30 + 13 * Math.sin(x / 38) + 7 * Math.sin(x / 15)
 const WAVE_PATH = Array.from({ length: WAVE_WIDTH / 6 + 1 }, (_, i) => `${i ? 'L' : 'M'}${i * 6} ${waveY(i * 6).toFixed(1)}`).join('')
 
 function SpendMeter({ spent, cap, label }: { spent: Money; cap: Money; label: string }) {
   const percent = percentOf(spent, cap)
   const x = (WAVE_WIDTH * percent) / 100
-  const bubble = Math.min(Math.max(x - 44, 0), WAVE_WIDTH - BUBBLE_WIDTH)
+  const bubble = Math.min(Math.max(x - 44, 0), BUBBLE_MAX_LEFT)
   return (
     <div className="wave">
       <svg viewBox={`0 0 ${WAVE_WIDTH} 60`} aria-hidden="true">
@@ -124,7 +125,7 @@ function PadalaSheet({ card, onBack }: { card: CardDetail; onBack(): void }) {
   const amountXlm = rate !== null && typed ? pesosToXlm(amount, rate) : amount
   const valid = typed && !ZERO_PATTERN.test(amountXlm)
   const pressKey = useCallback(
-    (key: string) => setAmount((current) => typeKey(current, key, rate === null ? 7 : 2)),
+    (key: string) => setAmount((current) => typeAmountKey(current, key, rate === null ? 7 : 2)),
     [rate],
   )
 
@@ -204,7 +205,7 @@ function TurnOffSheet(props: { deviceHash: string; onBack(): void; onDone(result
   const [pin, setPin] = useState('')
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const pressKey = useCallback((key: string) => setPin((current) => typeKey(current, key, 0)), [])
+  const pressKey = useCallback((key: string) => setPin((current) => typePinKey(current, key)), [])
 
   async function turnOff() {
     setWorking(true)

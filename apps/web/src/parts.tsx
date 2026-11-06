@@ -89,16 +89,6 @@ export function Keypad(props: { onKey(key: string): void; disabled?: boolean; de
   )
 }
 
-// One key's effect on a typed amount: no second point, no more decimals than the unit has.
-export function typeKey(current: string, key: string, decimals: number): string {
-  if (key === 'delete') return current.slice(0, -1)
-  if (key === '.') return current.includes('.') ? current : `${current || '0'}.`
-  if (current === '0') return key
-  const fraction = current.split('.')[1]
-  if (fraction !== undefined && fraction.length >= decimals) return current
-  return current.length < 14 ? current + key : current
-}
-
 export function Decision(props: { kind: 'ok' | 'no' | 'wt'; icon: string; word: string; children?: ReactNode }) {
   const { kind, icon, word, children } = props
   return (

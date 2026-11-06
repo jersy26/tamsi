@@ -31,6 +31,22 @@ export function pesosToXlm(pesos: string, phpPerXlm: string): string {
   return rate === 0n ? '0' : fromUnits((toUnits(pesos) * UNITS) / rate)
 }
 
+// One key's effect on a typed amount: no second point, no more decimals than the unit has.
+export function typeAmountKey(current: string, key: string, decimals: number): string {
+  if (key === 'delete') return current.slice(0, -1)
+  if (key === '.') return current.includes('.') ? current : `${current || '0'}.`
+  if (current === '0') return key
+  const fraction = current.split('.')[1]
+  if (fraction !== undefined && fraction.length >= decimals) return current
+  return current.length < 14 ? current + key : current
+}
+
+// One key's effect on a typed PIN. Unlike an amount, a leading zero counts.
+export function typePinKey(current: string, key: string): string {
+  if (key === 'delete') return current.slice(0, -1)
+  return current.length < 14 ? current + key : current
+}
+
 // For meters only: a whole percent, never an amount.
 export function percentOf(part: Money, whole: Money): number {
   const total = toUnits(whole.xlm)
