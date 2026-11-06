@@ -29,7 +29,7 @@ function setup(overrides: { intentStatus?: string; intentAmount?: string; fund?:
       sessions: {
         create: async (params: Record<string, unknown>, options: unknown) => {
           sessions.push({ params, options })
-          return { checkoutUrl: 'https://velo.test/pay/pi_1', paymentIntentId: 'pi_1' }
+          return { checkoutUrl: `https://velo.test/pay/pi_${sessions.length}`, paymentIntentId: `pi_${sessions.length}` }
         },
       },
     },
@@ -150,6 +150,29 @@ test('the ipon floor makes the agent ask once, with the formula filled in', asyn
   // A second decline finds the open request and opens no new checkout.
   assert.equal(await topups.considerRequest(CARD, 'ipon_floor'), null)
   assert.equal(sessions.length, 1)
+})
+
+test('money landing closes the open request, but its checkout still funds if paid', async () => {
+  const { topups, store, funded, sessions } = setup()
+  const topup = await topups.considerRequest(CARD, 'ipon_floor')
+  assert.ok(topup)
+  store.saveNoirEvent({
+    id: 'funded-1',
+    type: 'escrow.funded',
+    deviceHash: CARD,
+    amount: toStroops('60'),
+    contractId: 'CONTRACT',
+    ledger: 200,
+    ledgerClosedAt: new Date(Date.now() + 60_000).toISOString(),
+    txHash: 'tx-funded',
+  })
+  assert.equal(store.openAgentTopup(CARD, new Date(0)), null)
+  // With nothing open, the agent can ask again from the new numbers.
+  assert.equal((await topups.considerRequest(CARD, 'ipon_floor'))?.requestedBy, 'agent')
+  assert.equal(sessions.length, 2)
+  assert.equal(await deliver(topups, 'd1'), 200)
+  assert.equal(funded.length, 1)
+  assert.equal(store.getTopup(topup.id)?.status, 'funded')
 })
 
 test('an agent request is only made for the ipon floor or a low balance after paying', async () => {

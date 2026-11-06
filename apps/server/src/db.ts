@@ -273,9 +273,15 @@ export function createStore(db: DatabaseSync) {
   )
   const topupById = db.prepare('SELECT * FROM topups WHERE id = ?')
   const openAgentTopups = db.prepare(
-    `SELECT * FROM topups
-     WHERE device_hash = ? AND requested_by = 'agent' AND status = 'created' AND created_at >= ?
-     ORDER BY created_at DESC LIMIT 1`,
+    `SELECT * FROM topups t
+     WHERE t.device_hash = ? AND t.requested_by = 'agent' AND t.status = 'created' AND t.created_at >= ?
+       AND NOT EXISTS (
+         SELECT 1 FROM noir_events e
+         WHERE e.type = 'escrow.funded'
+           AND json_extract(e.payload, '$.deviceHash') = t.device_hash
+           AND json_extract(e.payload, '$.ledgerClosedAt') > t.created_at
+       )
+     ORDER BY t.created_at DESC LIMIT 1`,
   )
   const agentTopups = db.prepare(
     `SELECT * FROM topups WHERE device_hash = ? AND requested_by = 'agent' AND created_at IS NOT NULL
@@ -400,7 +406,9 @@ export function createStore(db: DatabaseSync) {
       )
       return parseTopup(topupById.get(topup.id))!
     },
-    // The agent's request that can still be paid. Velo's checkouts expire, so older ones don't count.
+    // The agent's request that still applies. Velo's checkouts expire, so older ones don't count,
+    // and money landing since makes its numbers stale. Its status stays `created`, so a checkout
+    // that's already open still funds the card if it gets paid.
     openAgentTopup(deviceHash: string, since: Date): TopupRecord | null {
       return parseTopup(openAgentTopups.get(deviceHash, since.toISOString()))
     },
