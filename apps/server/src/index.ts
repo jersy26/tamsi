@@ -2,10 +2,12 @@
 import { Velo } from '@carts1024/velo-sdk'
 import { NoirAgentClient } from '@noirx402/agent-sdk'
 import { XLM_ASSET, createNoirChain, createTamsi, deviceHashFromUid } from '@tamsi/agent'
+import { formatMoney } from '@tamsi/shared'
 import { createApp, type Services } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createStore, openDb, seedDemo } from './db.ts'
 import { createFeed } from './feed.ts'
+import { toMoney } from './money.ts'
 import { createTopups } from './topups.ts'
 
 async function buildServices(): Promise<Services> {
@@ -35,6 +37,7 @@ async function buildServices(): Promise<Services> {
         webhookSecret: config.velo.webhookSecret,
         publicUrl: config.velo.publicUrl,
         store,
+        phpPerXlm: config.phpPerXlm,
         fund: async (cardHash, amount) => {
           const { hash } = await noir.execute(config.treasury, {
             kind: 'fundEscrow',
@@ -49,7 +52,7 @@ async function buildServices(): Promise<Services> {
       })
     : null
   if (!topups) console.log('Velo keys not set: padala top-ups are off.')
-  return { config, noir, store, tamsi: createTamsi({ store, chain }), feed, topups }
+  return { config, noir, store, tamsi: createTamsi({ store, chain, display: (stroops) => formatMoney(toMoney(stroops, config.phpPerXlm)) }), feed, topups }
 }
 
 let services: Services | null = null

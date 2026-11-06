@@ -34,6 +34,9 @@ export interface CardSummary {
   deviceHash: string
   label: string
   holderName: string
+  // Pesos per XLM at the mock demo rate, or null when no rate is set. The screens ask for
+  // pesos when it's set and send the XLM it comes to.
+  phpPerXlm: string | null
 }
 
 // An amount as the screens show it: decimal XLM, plus whole pesos at the mock demo rate

@@ -9,7 +9,7 @@ export interface TapStore extends DecisionStore {
 
 export type TapOutcome = Decision & { id: string }
 
-export function createTamsi(deps: { store: TapStore; chain: Chain; now?: () => Date }) {
+export function createTamsi(deps: { store: TapStore; chain: Chain; now?: () => Date; display?: (stroops: bigint) => string }) {
   const queue = new SerialQueue()
   return {
     tap(request: TapRequest): Promise<TapOutcome> {

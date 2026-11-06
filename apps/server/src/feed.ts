@@ -1,9 +1,9 @@
 // Noir events become the OFW's receipts. One noir.watch serves the whole server. It starts
 // from the last saved ledger, so a restart backfills what it missed; each event is saved
 // once (dedupe on event.id, agents.md rule 6) and only then pushed to the open SSE streams.
-import { fromStroops, type NoirAgentClient, type NoirEvent } from '@noirx402/agent-sdk'
+import type { NoirAgentClient, NoirEvent } from '@noirx402/agent-sdk'
 import { explorerTxUrl } from '@tamsi/agent'
-import { FEED_EVENT_TYPES, declinedText, feedText, type FeedItem } from '@tamsi/shared'
+import { CATEGORY_ALLOWED, FEED_EVENT_TYPES, declinedText, feedText, formatMoney, reasonText, type FeedItem } from '@tamsi/shared'
 import type { DeclinedTap, StoredNoirEvent, Store, TopupRecord } from './db.ts'
 import { toMoney } from './money.ts'
 
@@ -20,21 +20,27 @@ export function createFeed(deps: {
   phpPerXlm: bigint | null
 }) {
   const { noir, store, phpPerXlm } = deps
+  const display = (stroops: bigint) => formatMoney(toMoney(stroops, phpPerXlm))
   const listeners = new Map<Listener, string>()
   const status = { watching: false, eventsSaved: 0, lastError: null as string | null }
 
   function toItem(event: StoredNoirEvent): FeedItem {
     const amount = event.amount === undefined ? null : BigInt(event.amount)
-    // The agent's own sentence when this server made the payment.
-    const reason = event.type === 'payment.authorized' ? store.tapReasonByTx(event.txHash) : null
-    const merchantName = event.merchant ? store.getMerchantByAddress(event.merchant)?.name : undefined
+    const merchant = event.merchant ? store.getMerchantByAddress(event.merchant) : null
+    const merchantName = merchant?.name
+    // The agent's own sentence when this server made the payment, worded now so older receipts
+    // read the same as new ones.
+    const reason =
+      event.type === 'payment.authorized' && merchant && amount !== null && store.tapReasonByTx(event.txHash)
+        ? reasonText('paid', { amount: display(amount), merchantName: merchant.name, categoryAllowed: CATEGORY_ALLOWED[merchant.category] })
+        : null
     return {
       id: event.id,
       type: event.type,
       text:
         reason ??
         feedText(event.type, {
-          ...(amount !== null && { amountXlm: fromStroops(amount) }),
+          ...(amount !== null && { amount: display(amount) }),
           ...(merchantName && { merchantName }),
         }),
       amount: amount === null ? null : toMoney(amount, phpPerXlm),
@@ -48,7 +54,7 @@ export function createFeed(deps: {
       id: `tap-${tap.id}`,
       type: 'tap.declined',
       text: declinedText(tap.reasonCode, {
-        amountXlm: fromStroops(tap.amount),
+        amount: display(tap.amount),
         merchantName: tap.merchantName ?? 'A shop',
       }),
       amount: toMoney(tap.amount, phpPerXlm),

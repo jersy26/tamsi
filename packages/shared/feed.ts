@@ -16,20 +16,21 @@ export type FeedEventType = (typeof FEED_EVENT_TYPES)[number]
 export type FeedItemType = FeedEventType | 'tap.declined' | 'topup.requested'
 
 export interface FeedContext {
-  amountXlm: string
+  // Already formatted for reading: "₱250", or "5 XLM" when no rate is set.
+  amount: string
   merchantName: string
 }
 
 const TEMPLATES: Record<FeedEventType, (c: FeedContext) => string> = {
-  'payment.authorized': (c) => `Paid ${c.amountXlm} XLM at ${c.merchantName}.`,
-  'payment.claimed': (c) => `${c.merchantName} collected ${c.amountXlm} XLM.`,
-  'escrow.funded': (c) => `Your padala of ${c.amountXlm} XLM landed on the card.`,
-  'escrow.defunded': (c) => `${c.amountXlm} XLM came back to you from the card.`,
+  'payment.authorized': (c) => `Paid ${c.amount} at ${c.merchantName}.`,
+  'payment.claimed': (c) => `${c.merchantName} collected ${c.amount}.`,
+  'escrow.funded': (c) => `Your padala of ${c.amount} landed on the card.`,
+  'escrow.defunded': (c) => `${c.amount} came back to you from the card.`,
   'agent.revoked': () => 'You turned off spending on this card.',
 }
 
 export function feedText(type: FeedEventType, context: Partial<FeedContext> = {}): string {
-  return TEMPLATES[type]({ amountXlm: '', merchantName: 'A shop', ...context })
+  return TEMPLATES[type]({ amount: '', merchantName: 'A shop', ...context })
 }
 
 // A decline on the OFW's feed: the rule that stopped it, and what they can do. Calm, not alarming.
@@ -51,18 +52,19 @@ const DECLINE_ADVICE: Record<Exclude<ReasonCode, 'paid'>, string> = {
 
 export function declinedText(code: ReasonCode, context: FeedContext): string {
   const advice = code === 'paid' ? '' : DECLINE_ADVICE[code]
-  return `Declined ${context.amountXlm} XLM at ${context.merchantName}: ${advice}`
+  return `Declined ${context.amount} at ${context.merchantName}: ${advice}`
 }
 
 export interface TopupRequestContext {
-  amountXlm: string
-  avgDailyXlm: string
+  amount: string
+  avgDaily: string
   days: string
-  iponXlm: string
-  balanceXlm: string
+  ipon: string
+  balance: string
+  minimum: string
 }
 
 // The formula filled in, so the OFW sees how the agent got its number.
 export function topupRequestText(c: TopupRequestContext): string {
-  return `The agent asks for ${c.amountXlm} XLM: ${c.avgDailyXlm} a day × ${c.days} days to payday + ${c.iponXlm} ipon − ${c.balanceXlm} on the card, rounded up (minimum 5).`
+  return `The agent asks for ${c.amount}: ${c.avgDaily} a day × ${c.days} days to payday + ${c.ipon} ipon − ${c.balance} on the card, rounded up (minimum ${c.minimum}).`
 }

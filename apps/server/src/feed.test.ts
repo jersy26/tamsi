@@ -94,7 +94,7 @@ test("another card's events and other merchants' claims are ignored", () => {
 test('a receipt names the shop and shows the demo-rate pesos', () => {
   const { feed, pushed } = setup()
   feed.receive(paid('e1'))
-  assert.equal(pushed[0]!.text, "Paid 2 XLM at Aling Nena's Store.")
+  assert.equal(pushed[0]!.text, "Paid ₱100 at Aling Nena's Store.")
   assert.deepEqual(pushed[0]!.amount, { xlm: '2', php: '100' })
   assert.equal(pushed[0]!.explorerUrl, 'https://stellar.expert/explorer/testnet/tx/tx-e1')
 })
@@ -117,7 +117,7 @@ test("the agent's sentence replaces the plain one once the tap is saved", () => 
   feed.tapSaved('tx-e1')
   assert.equal(pushed.length, 2)
   assert.equal(pushed[1]!.id, pushed[0]!.id)
-  assert.equal(pushed[1]!.text, 'The agent sentence.')
+  assert.equal(pushed[1]!.text, "Paid ₱100 at Aling Nena's Store — groceries are allowed and you're under today's limit.")
 })
 
 test('a merchant claim reaches the card feed; the newest receipt comes first', () => {
@@ -136,7 +136,7 @@ test('a merchant claim reaches the card feed; the newest receipt comes first', (
   assert.equal(pushed.length, 2)
   assert.deepEqual(
     feed.list(CARD).map((item) => item.text),
-    ["Aling Nena's Store collected 2 XLM.", "Paid 2 XLM at Aling Nena's Store."],
+    ["Aling Nena's Store collected ₱100.", "Paid ₱100 at Aling Nena's Store."],
   )
 })
 
@@ -188,7 +188,7 @@ test('a declined tap joins the feed by time, in the OFW voice, with no explorer 
   assert.equal(pushed.length, 2)
   const [newest, oldest] = feed.list(CARD)
   assert.equal(newest!.type, 'tap.declined')
-  assert.equal(newest!.text, "Declined 5 XLM at Games arcade: this kind of shop isn't on your allowed list.")
+  assert.equal(newest!.text, "Declined ₱250 at Games arcade: this kind of shop isn't on your allowed list.")
   assert.equal(newest!.explorerUrl, null)
   assert.equal(oldest!.id, 'e1')
 })

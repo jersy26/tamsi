@@ -23,18 +23,19 @@ export const REASON_CODES = [
 export type ReasonCode = (typeof REASON_CODES)[number]
 
 export interface ReasonContext {
-  amountXlm: string
+  // Already formatted for reading: "₱250", or "5 XLM" when no rate is set.
+  amount: string
   merchantName: string
   categoryAllowed: string
-  leftTodayXlm: string
+  leftToday: string
   contractError: string
 }
 
 const TEMPLATES: Record<ReasonCode, (c: ReasonContext) => string> = {
-  paid: (c) => `Paid ${c.amountXlm} XLM at ${c.merchantName} — ${c.categoryAllowed} and you're under today's limit.`,
+  paid: (c) => `Paid ${c.amount} at ${c.merchantName} — ${c.categoryAllowed} and you're under today's limit.`,
   card_inactive: () => "This card isn't active right now. The OFW can turn it back on.",
   merchant_not_allowed: (c) => `${c.merchantName} isn't on this card's allowed list. The OFW can add this kind of shop.`,
-  daily_cap: (c) => `This goes over today's limit — ${c.leftTodayXlm} XLM left today. Try a smaller amount, or tap again tomorrow.`,
+  daily_cap: (c) => `This goes over today's limit — ${c.leftToday} left today. Try a smaller amount, or tap again tomorrow.`,
   ipon_floor: () => 'This would dip into the ipon, so the agent kept it safe. The OFW can send more padala.',
   no_agent: () => 'The OFW has turned off spending on this card. They can turn it back on.',
   wrong_agent: () => "This card is set up with a different agent. The OFW needs to set it up again.",
@@ -49,10 +50,10 @@ const TEMPLATES: Record<ReasonCode, (c: ReasonContext) => string> = {
 
 export function reasonText(code: ReasonCode, context: Partial<ReasonContext> = {}): string {
   return TEMPLATES[code]({
-    amountXlm: '',
+    amount: '',
     merchantName: 'This shop',
     categoryAllowed: 'this shop is allowed',
-    leftTodayXlm: '0',
+    leftToday: '0 XLM',
     contractError: 'unknown',
     ...context,
   })

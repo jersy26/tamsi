@@ -3,7 +3,7 @@
 const XLM = 10_000_000n
 const CENT = 100_000n
 const DAY_MS = 24 * 60 * 60 * 1000
-const MINIMUM = 5n * XLM
+export const TOPUP_MINIMUM = 5n * XLM
 const LOW_DAYS = 2n
 
 export interface TopupPlanInput {
@@ -33,7 +33,7 @@ export function planTopup(input: TopupPlanInput): TopupPlan {
   const roundedUp = needed > 0n ? ((needed + XLM - 1n) / XLM) * XLM : 0n
   const usable = input.balance > input.iponFloor ? input.balance - input.iponFloor : 0n
   return {
-    amount: roundedUp > MINIMUM ? roundedUp : MINIMUM,
+    amount: roundedUp > TOPUP_MINIMUM ? roundedUp : TOPUP_MINIMUM,
     avgDailySpend,
     days,
     low: usable < avgDailySpend * LOW_DAYS,

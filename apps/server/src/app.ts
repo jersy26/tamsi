@@ -122,6 +122,7 @@ export function createApp(services: Services | null) {
   if (services) {
     const { config, noir, store, tamsi, feed, topups } = services
     const money = (stroops: bigint) => toMoney(stroops, config.phpPerXlm)
+    const phpPerXlm = config.phpPerXlm === null ? null : fromStroops(config.phpPerXlm)
     const topupBody = (topup: TopupRecord): TopupDetail => ({
       id: topup.id,
       status: topup.status,
@@ -135,7 +136,7 @@ export function createApp(services: Services | null) {
     })
 
     app.get('/api/cards', (_req, res) => {
-      res.json(store.listCards())
+      res.json(store.listCards().map((card) => ({ ...card, phpPerXlm })))
     })
 
     app.get('/api/cards/:hash', async (req, res) => {
@@ -159,6 +160,7 @@ export function createApp(services: Services | null) {
         deviceHash: card.deviceHash,
         label: card.label,
         holderName: card.holderName,
+        phpPerXlm,
         status: card.status,
         maxPerTap: money(card.maxPerTap),
         expiresAt: card.expiresAt,

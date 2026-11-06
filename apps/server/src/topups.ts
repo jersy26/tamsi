@@ -3,9 +3,10 @@
 import { randomUUID } from 'node:crypto'
 import { Velo, type WebhookEvent } from '@carts1024/velo-sdk'
 import { fromStroops, toStroops } from '@noirx402/agent-sdk'
-import { SerialQueue, explorerTxUrl, planTopup } from '@tamsi/agent'
-import { topupRequestText, type ReasonCode } from '@tamsi/shared'
+import { SerialQueue, TOPUP_MINIMUM, explorerTxUrl, planTopup } from '@tamsi/agent'
+import { formatMoney, topupRequestText, type ReasonCode } from '@tamsi/shared'
 import type { Store, TopupRecord } from './db.ts'
+import { toMoney } from './money.ts'
 
 // SDD §3 assumes Velo takes this for XLM. Its docs only show USDC, so the first real
 // checkout has to confirm it.
@@ -22,8 +23,11 @@ export function createTopups(deps: {
   fund(deviceHash: string, amount: bigint): Promise<string>
   getBalance(deviceHash: string): Promise<bigint>
   onRequested(topup: TopupRecord): void
+  phpPerXlm?: bigint | null
 }) {
-  const { velo, webhookSecret, publicUrl, store, fund, getBalance, onRequested } = deps
+  const { velo, webhookSecret, publicUrl, store, fund, getBalance, onRequested, phpPerXlm = null } = deps
+  // The formula reads in pesos when there's a rate. In XLM only the total carries the unit.
+  const term = (stroops: bigint) => (phpPerXlm === null ? fromStroops(stroops) : formatMoney(toMoney(stroops, phpPerXlm)))
   const requestQueue = new SerialQueue()
   // Treasury transactions share one sequence number, so they go one at a time.
   const treasuryQueue = new SerialQueue()
@@ -107,11 +111,12 @@ export function createTopups(deps: {
         })
         if (reasonCode === 'paid' && !plan.low) return null
         const text = topupRequestText({
-          amountXlm: fromStroops(plan.amount),
-          avgDailyXlm: fromStroops(plan.avgDailySpend),
+          amount: formatMoney(toMoney(plan.amount, phpPerXlm)),
+          avgDaily: term(plan.avgDailySpend),
           days: plan.days.toString(),
-          iponXlm: fromStroops(card.iponFloor),
-          balanceXlm: fromStroops(balance),
+          ipon: term(card.iponFloor),
+          balance: term(balance),
+          minimum: term(TOPUP_MINIMUM),
         })
         const topup = await create(deviceHash, plan.amount, 'agent', text)
         onRequested(topup)

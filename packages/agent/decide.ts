@@ -68,13 +68,15 @@ export function phDayStart(now: Date): Date {
 
 export async function decide(
   tap: TapRequest,
-  deps: { store: DecisionStore; chain: Chain; now?: () => Date },
+  deps: { store: DecisionStore; chain: Chain; now?: () => Date; display?: (stroops: bigint) => string },
 ): Promise<Decision> {
   const { store, chain } = deps
+  // Only the wording of the sentence. No decision reads it (agents.md rule 8).
+  const display = deps.display ?? ((stroops: bigint) => `${fromStroops(stroops)} XLM`)
   const checks: CheckResult[] = []
   const merchant = store.getMerchant(tap.merchantId)
   const context: Partial<ReasonContext> = {
-    amountXlm: fromStroops(tap.amount),
+    amount: display(tap.amount),
     ...(merchant && { merchantName: merchant.name, categoryAllowed: CATEGORY_ALLOWED[merchant.category] }),
   }
 
@@ -113,7 +115,7 @@ export async function decide(
   const spentToday = store.spentSince(card.deviceHash, phDayStart(deps.now?.() ?? new Date()))
   if (spentToday + tap.amount > card.dailyCap) {
     const left = card.dailyCap - spentToday
-    context.leftTodayXlm = fromStroops(left > 0n ? left : 0n)
+    context.leftToday = display(left > 0n ? left : 0n)
     return decline('daily_cap', 'daily_cap')
   }
   checks.push({ id: 'daily_cap', ok: true })
