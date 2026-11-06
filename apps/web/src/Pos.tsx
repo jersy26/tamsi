@@ -1,7 +1,7 @@
 // The shop counter: pick the shop, enter the amount, tap. The agent's answer fills the
 // screen, readable at arm's length. All decisions and wording come from the server.
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { CHECK_LABELS, type CardSummary, type MerchantSummary, type TapResponse } from '@tamsi/shared'
+import { CHECK_LABELS, type CardSummary, type ClaimResult, type MerchantSummary, type TapResponse } from '@tamsi/shared'
 import { getJson } from './api.ts'
 
 type TapState =
@@ -57,6 +57,44 @@ function DecisionCard({ state }: { state: TapState }) {
         <a className="explorer-link" href={result.explorerUrl} target="_blank" rel="noreferrer">
           View on Stellar Expert
         </a>
+      )}
+    </section>
+  )
+}
+
+type ClaimState = { kind: 'idle' } | { kind: 'working' } | { kind: 'done'; result: ClaimResult } | { kind: 'error' }
+
+function CollectPayments({ merchant }: { merchant: MerchantSummary }) {
+  const [state, setState] = useState<ClaimState>({ kind: 'idle' })
+
+  // A different shop starts clean, so one shop's result never shows under another.
+  useEffect(() => setState({ kind: 'idle' }), [merchant.id])
+
+  async function collect() {
+    setState({ kind: 'working' })
+    try {
+      const res = await fetch(`/api/merchants/${encodeURIComponent(merchant.id)}/claim`, { method: 'POST' })
+      if (!res.ok) throw new Error(`Claim answered ${res.status}`)
+      setState({ kind: 'done', result: (await res.json()) as ClaimResult })
+    } catch {
+      setState({ kind: 'error' })
+    }
+  }
+
+  return (
+    <section className="collect" aria-live="polite">
+      <button className="button secondary" type="button" disabled={state.kind === 'working'} onClick={collect}>
+        {state.kind === 'working' ? 'Collecting…' : `Collect payments for ${merchant.name}`}
+      </button>
+      {state.kind === 'error' && <p className="collect-note">We couldn't collect right now. Try again in a moment.</p>}
+      {state.kind === 'done' && !state.result.explorerUrl && <p className="collect-note">Nothing to collect right now.</p>}
+      {state.kind === 'done' && state.result.explorerUrl && (
+        <p className="collect-note">
+          Collected {state.result.collected.xlm} XLM.{' '}
+          <a href={state.result.explorerUrl} target="_blank" rel="noreferrer">
+            View on Stellar Expert
+          </a>
+        </p>
       )}
     </section>
   )
@@ -150,6 +188,9 @@ export function Pos() {
       <div ref={decisionRef}>
         <DecisionCard state={state} />
       </div>
+      {merchants.some((merchant) => merchant.id === merchantId) && (
+        <CollectPayments merchant={merchants.find((merchant) => merchant.id === merchantId)!} />
+      )}
     </main>
   )
 }

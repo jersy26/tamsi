@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import express, { type NextFunction, type Request, type Response } from 'express'
-import { fromStroops, normalizeDeviceHash, toStroops, type NoirAgentClient } from '@noirx402/agent-sdk'
-import { deviceHashFromUid, explorerTxUrl, phDayStart, type createTamsi } from '@tamsi/agent'
-import type { CardDetail, TapResponse, TopupDetail } from '@tamsi/shared'
+import { fromStroops, keypairSigner, normalizeDeviceHash, toStroops, type NoirAgentClient } from '@noirx402/agent-sdk'
+import { XLM_ASSET, deviceHashFromUid, explorerTxUrl, phDayStart, type createTamsi } from '@tamsi/agent'
+import type { CardDetail, ClaimResult, TapResponse, TopupDetail } from '@tamsi/shared'
 import type { Config } from './config.ts'
 import type { Store, TopupRecord } from './db.ts'
 import type { Feed } from './feed.ts'
@@ -194,6 +194,30 @@ export function createApp(services: Services | null) {
       })
     })
 
+    app.post('/api/merchants/:id/claim', async (req, res) => {
+      const merchant = store.getMerchant(req.params.id)
+      const secret = merchant && config.merchantSecrets[merchant.id]
+      if (!merchant || !secret) {
+        res.status(404).json({ error: 'Shop not found' })
+        return
+      }
+      try {
+        const pending = await noir.getPendingBalance(merchant.stellarAddress)
+        if (pending === 0n) {
+          const body: ClaimResult = { collected: money(0n), explorerUrl: null }
+          res.json(body)
+          return
+        }
+        const { hash } = await noir.claim({ merchant: keypairSigner(secret), token: XLM_ASSET })
+        console.log(`claim: ${explorerTxUrl(hash)}`)
+        const body: ClaimResult = { collected: money(pending), explorerUrl: explorerTxUrl(hash) }
+        res.json(body)
+      } catch (err) {
+        console.error(`Could not collect for ${merchant.id}:`, err)
+        res.status(502).json({ error: "We couldn't collect right now. Try again in a moment." })
+      }
+    })
+
     app.post('/api/topups', async (req, res) => {
       if (!topups) {
         res.status(503).json({ error: 'Padala is not set up yet' })
@@ -239,6 +263,7 @@ export function createApp(services: Services | null) {
       }
       const outcome = await tamsi.tap(tap)
       if (outcome.txHash) feed.tapSaved(outcome.txHash)
+      else feed.tapDeclined(tap.deviceHash, outcome.id)
       const { xlm: amountXlm, php: amountPhp } = money(tap.amount)
       const body: TapResponse = {
         id: outcome.id,

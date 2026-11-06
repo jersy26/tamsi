@@ -3,8 +3,8 @@
 // once (dedupe on event.id, agents.md rule 6) and only then pushed to the open SSE streams.
 import { fromStroops, type NoirAgentClient, type NoirEvent } from '@noirx402/agent-sdk'
 import { explorerTxUrl } from '@tamsi/agent'
-import { FEED_EVENT_TYPES, feedText, type FeedItem } from '@tamsi/shared'
-import type { StoredNoirEvent, Store } from './db.ts'
+import { FEED_EVENT_TYPES, declinedText, feedText, type FeedItem } from '@tamsi/shared'
+import type { DeclinedTap, StoredNoirEvent, Store } from './db.ts'
 import { toMoney } from './money.ts'
 
 // RPC keeps about 7 days (~120,000 ledgers) and rejects older ones.
@@ -40,6 +40,20 @@ export function createFeed(deps: {
       amount: amount === null ? null : toMoney(amount, phpPerXlm),
       at: event.ledgerClosedAt,
       explorerUrl: explorerTxUrl(event.txHash),
+    }
+  }
+
+  function declinedItem(tap: DeclinedTap): FeedItem {
+    return {
+      id: `tap-${tap.id}`,
+      type: 'tap.declined',
+      text: declinedText(tap.reasonCode, {
+        amountXlm: fromStroops(tap.amount),
+        merchantName: tap.merchantName ?? 'A shop',
+      }),
+      amount: toMoney(tap.amount, phpPerXlm),
+      at: tap.createdAt,
+      explorerUrl: null,
     }
   }
 
@@ -101,8 +115,25 @@ export function createFeed(deps: {
       }
     },
 
+    // Chain events and declined taps, newest first. Dates are compared as instants
+    // because the chain and this server format them differently.
     list(deviceHash: string): FeedItem[] {
-      return store.listNoirEvents(deviceHash, FEED_LENGTH).map(toItem)
+      return [
+        ...store.listNoirEvents(deviceHash, FEED_LENGTH).map(toItem),
+        ...store.listDeclinedTaps(deviceHash, FEED_LENGTH).map(declinedItem),
+      ]
+        .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+        .slice(0, FEED_LENGTH)
+    },
+
+    // A declined tap never reaches the chain, so the watcher won't see it.
+    tapDeclined(deviceHash: string, tapId: string) {
+      const tap = store.listDeclinedTaps(deviceHash, FEED_LENGTH).find((row) => row.id === tapId)
+      if (!tap) return
+      const item = declinedItem(tap)
+      for (const [listener, listenerHash] of listeners) {
+        if (listenerHash === deviceHash) listener(item)
+      }
     },
 
     subscribe(deviceHash: string, listener: Listener): () => void {

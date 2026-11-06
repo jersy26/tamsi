@@ -469,3 +469,20 @@ a {
 .pay-back {
   margin-top: 16px;
 }
+
+/* Declined receipts */
+.receipt-icon.declined {
+  background: var(--declined);
+}
+
+/* Collect payments */
+.collect {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--navy-line);
+}
+
+.collect-note {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+}

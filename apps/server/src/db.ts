@@ -14,6 +14,7 @@ import {
   type Category,
   type FeedEventType,
   type MerchantSummary,
+  type ReasonCode,
   type TopupStatus,
 } from '@tamsi/shared'
 import type { AgentCard, AgentMerchant, TapStore } from '@tamsi/agent'
@@ -212,6 +213,14 @@ function parseTopup(row: unknown): TopupRecord | null {
   }
 }
 
+export interface DeclinedTap {
+  id: string
+  reasonCode: ReasonCode
+  amount: bigint
+  merchantName: string | null
+  createdAt: string
+}
+
 function parseNoirEvents(rows: unknown): StoredNoirEvent[] {
   return (rows as { payload: string }[]).map((row) => JSON.parse(row.payload) as StoredNoirEvent)
 }
@@ -240,6 +249,12 @@ export function createStore(db: DatabaseSync) {
   const noirEventsForTx = db.prepare(`SELECT payload FROM noir_events WHERE json_extract(payload, '$.txHash') = ?`)
   const merchantByAddress = db.prepare('SELECT id, name, category, stellar_address FROM merchants WHERE stellar_address = ?')
   const tapReason = db.prepare('SELECT reason_text FROM taps WHERE tx_hash = ?')
+  const declinedTaps = db.prepare(
+    `SELECT t.id, t.reason_code, t.amount, t.created_at, m.name AS merchant_name
+     FROM taps t LEFT JOIN merchants m ON m.id = t.merchant_id
+     WHERE t.device_hash = ? AND t.decision = 'declined'
+     ORDER BY t.created_at DESC LIMIT ?`,
+  )
   const topupInsert = db.prepare(
     `INSERT INTO topups (id, device_hash, payment_intent_id, amount, requested_by, status, checkout_url)
      VALUES (?, ?, ?, ?, ?, 'created', ?)`,
@@ -309,6 +324,22 @@ export function createStore(db: DatabaseSync) {
       const row = merchantByAddress.get(address) as unknown as MerchantRow | undefined
       if (!row) return null
       return { id: row.id, name: row.name, category: row.category, stellarAddress: row.stellar_address }
+    },
+    listDeclinedTaps(deviceHash: string, limit: number): DeclinedTap[] {
+      const rows = declinedTaps.all(deviceHash, limit) as unknown as {
+        id: string
+        reason_code: ReasonCode
+        amount: string
+        created_at: string
+        merchant_name: string | null
+      }[]
+      return rows.map((row) => ({
+        id: row.id,
+        reasonCode: row.reason_code,
+        amount: BigInt(row.amount),
+        merchantName: row.merchant_name,
+        createdAt: row.created_at,
+      }))
     },
     tapReasonByTx(txHash: string): string | null {
       return (tapReason.get(txHash) as unknown as { reason_text: string } | undefined)?.reason_text ?? null

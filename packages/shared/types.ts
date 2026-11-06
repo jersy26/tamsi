@@ -1,5 +1,5 @@
 import type { Category } from './categories.ts'
-import type { FeedEventType } from './feed.ts'
+import type { FeedItemType } from './feed.ts'
 import type { CheckId, ReasonCode } from './reasons.ts'
 
 export type CardStatus = 'active' | 'revoked'
@@ -43,14 +43,20 @@ export interface Money {
   php: string | null
 }
 
-// One receipt on the OFW's feed, from a saved Noir event.
+// One receipt on the OFW's feed. Only what reached the chain has an explorer link.
 export interface FeedItem {
   id: string
-  type: FeedEventType
+  type: FeedItemType
   text: string
   amount: Money | null
   at: string
-  explorerUrl: string
+  explorerUrl: string | null
+}
+
+// What /api/merchants/:id/claim returns.
+export interface ClaimResult {
+  collected: Money
+  explorerUrl: string | null
 }
 
 // What /api/cards/:hash returns. Balance and ipon are null when the chain can't be read.

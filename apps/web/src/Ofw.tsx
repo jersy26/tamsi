@@ -1,15 +1,16 @@
 // The OFW's view: is my family okay, how much is left, did anything odd happen. Three
 // numbers, then the receipts. New receipts arrive over SSE; every number comes from the server.
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { CardDetail, CardSummary, FeedEventType, FeedItem, Money, TopupDetail } from '@tamsi/shared'
+import type { CardDetail, CardSummary, FeedItem, FeedItemType, Money, TopupDetail } from '@tamsi/shared'
 import { getJson } from './api.ts'
 
-const RECEIPT_ICONS: Record<FeedEventType, { icon: string; className: string }> = {
+const RECEIPT_ICONS: Record<FeedItemType, { icon: string; className: string }> = {
   'payment.authorized': { icon: '✓', className: 'paid' },
   'payment.claimed': { icon: '₱', className: '' },
   'escrow.funded': { icon: '↓', className: 'funded' },
   'escrow.defunded': { icon: '↩', className: '' },
   'agent.revoked': { icon: '✕', className: 'off' },
+  'tap.declined': { icon: '✕', className: 'declined' },
 }
 
 function formatPesos(php: string): string {
@@ -99,10 +100,14 @@ function Receipt({ item }: { item: FeedItem }) {
         <p className="receipt-meta">
           {formatTime(item.at)}
           {item.amount?.php != null && ` · ≈ ₱${formatPesos(item.amount.php)}`}
-          <br />
-          <a href={item.explorerUrl} target="_blank" rel="noreferrer">
-            View on Stellar Expert
-          </a>
+          {item.explorerUrl && (
+            <>
+              <br />
+              <a href={item.explorerUrl} target="_blank" rel="noreferrer">
+                View on Stellar Expert
+              </a>
+            </>
+          )}
         </p>
       </div>
     </li>

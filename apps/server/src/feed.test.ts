@@ -168,3 +168,27 @@ test('a backfill never reaches past what the RPC keeps', async () => {
   await createFeed({ noir, store, phpPerXlm: null }).start()
   assert.equal(fromLedger, 400_000)
 })
+
+test('a declined tap joins the feed by time, in the OFW voice, with no explorer link', () => {
+  const { store, feed, pushed } = setup()
+  feed.receive(paid('e1', { ledgerClosedAt: '2020-01-01T00:00:00Z' } as Partial<NoirEvent>))
+  const id = store.saveTap(
+    { deviceHash: CARD, merchantId: 'arcade', amount: toStroops('5') },
+    {
+      decision: 'declined',
+      reasonCode: 'merchant_not_allowed',
+      reasonText: 'Shown at the counter.',
+      checks: [],
+      merchant: null,
+      txHash: null,
+      nonce: null,
+    },
+  )
+  feed.tapDeclined(CARD, id)
+  assert.equal(pushed.length, 2)
+  const [newest, oldest] = feed.list(CARD)
+  assert.equal(newest!.type, 'tap.declined')
+  assert.equal(newest!.text, "Declined 5 XLM at Games arcade: this kind of shop isn't on your allowed list.")
+  assert.equal(newest!.explorerUrl, null)
+  assert.equal(oldest!.id, 'e1')
+})
